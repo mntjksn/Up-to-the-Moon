@@ -10,3 +10,4 @@
 *.sln
 *.user
 *.apk
+.vsconfig
