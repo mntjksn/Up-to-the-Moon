@@ -135,7 +135,7 @@ public class SellStorageManager : MonoBehaviour
             total += data.resources[i];
 
         // 최대 저장 가능 개수는 SaveManager의 storageMax 사용
-        long max = data.storage.storageMax;
+        long max = data.blackHole.BlackHoleStorageMax;
 
         int percent = 0;
         if (max > 0)

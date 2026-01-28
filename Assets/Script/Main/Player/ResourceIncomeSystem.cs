@@ -3,10 +3,6 @@ using UnityEngine;
 
 public class ResourceIncomeSystem : MonoBehaviour
 {
-    [Header("Income")]
-    [SerializeField] private float dropsPerSecond = 3f;
-    [SerializeField] private int amountPerDrop = 1;
-
     [Header("VFX")]
     [SerializeField] private ResourcePickupVFX pickupVfxPrefab;
     [SerializeField] private Transform blackHole;
@@ -26,7 +22,7 @@ public class ResourceIncomeSystem : MonoBehaviour
 
         if (IsStorageFull()) return;
 
-        acc += Time.deltaTime * dropsPerSecond;
+        acc += Time.deltaTime * SaveManager.Instance.GetIncomeLv();
 
         while (acc >= 1f)
         {
@@ -51,7 +47,7 @@ public class ResourceIncomeSystem : MonoBehaviour
         // 해금된 것 중에서 가중치 랜덤
         var picked = PickWeightedRandom(unlocked);
 
-        SaveManager.Instance.AddResource(picked.item_num, amountPerDrop);
+        SaveManager.Instance.AddResource(picked.item_num, 1);
         SpawnPickupVFX(picked);
 
         // UI는 이벤트로 갱신하는 구조면 이거 없어도 됨
@@ -110,7 +106,7 @@ public class ResourceIncomeSystem : MonoBehaviour
         if (data == null || data.resources == null) return false;
 
         // 너 SaveData에 storageMax를 넣었잖아. 그걸로 맞추자.
-        long max = data.storage.storageMax;
+        long max = data.blackHole.BlackHoleStorageMax;
         if (max <= 0) return false;
 
         long total = 0;

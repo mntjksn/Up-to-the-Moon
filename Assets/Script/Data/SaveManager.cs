@@ -8,7 +8,7 @@ using UnityEngine.Networking;
 public class SaveData
 {
     public Player player = new Player();            // 플레이어
-    public Storage storage = new Storage();            // 플레이어
+    public BlackHole blackHole = new BlackHole();            // 플레이어
 
     [System.Serializable]
     public class Player
@@ -19,9 +19,12 @@ public class SaveData
     }
 
     [System.Serializable]
-    public class Storage
+    public class BlackHole
     {
-        public long storageMax = 100;
+        public int blackholeIncomeLv = 0;   // 초당 흡수량
+        public int blackholeStorageLv = 0;  // 최대 적재량
+
+        public long BlackHoleStorageMax = 100;
     }
 
     // 광물(자원) 30개 보유량: 인덱스 = 자원 id (0~29)
@@ -132,7 +135,7 @@ public class SaveManager : MonoBehaviour
     public float GetSpeed() => Data.player.speed;
     public void AddSpeed(float amount)
     {
-        Data.player.speed += amount;
+        Data.player.speed = amount;
         Save();
     }
 
@@ -149,4 +152,10 @@ public class SaveManager : MonoBehaviour
         Save();
         OnResourceChanged?.Invoke();
     }
+
+    public int GetIncomeLv() => Data.blackHole.blackholeIncomeLv;
+    public void AddIncomeLv(int delta = 1) { Data.blackHole.blackholeIncomeLv += delta; Save(); }
+
+    public int GetStorageLv() => Data.blackHole.blackholeStorageLv;
+    public void AddStorageLv(int delta = 1) { Data.blackHole.blackholeStorageLv += delta; Save(); }
 }

@@ -16,6 +16,10 @@ public class MainUIController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI kmText;
     [SerializeField] private TextMeshProUGUI speedText;
 
+    [Header("BalckHole")]
+    [SerializeField] private TextMeshProUGUI incomeText;
+    [SerializeField] private TextMeshProUGUI storagemaxText;
+
     private float speedMultiplier = 1f;
     private float currentSpeed;
 
@@ -72,6 +76,17 @@ public class MainUIController : MonoBehaviour
 
         if (speedText != null)
             speedText.text = $"현재 속도 : {currentSpeed.ToString("N2")} Km / s";
+
+        if (incomeText.text != null)
+        {
+            if (SaveManager.Instance.GetIncomeLv() == 0)
+                incomeText.text = $"현재 수급 속도 : {0.5.ToString("N1")} 개 / s";
+            else
+                incomeText.text = $"현재 수급 속도 : {SaveManager.Instance.GetIncomeLv().ToString("N1")}개 / s";
+        }
+
+        if (storagemaxText.text != null)
+            storagemaxText.text = $"최대 적재량 : {FormatKoreanNumber(SaveManager.Instance.Data.blackHole.BlackHoleStorageMax)}개";
     }
 
     private string FormatKoreanNumber(long n)
