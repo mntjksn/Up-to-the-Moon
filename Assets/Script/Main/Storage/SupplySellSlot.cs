@@ -11,6 +11,7 @@ public class SupplySellSlot : MonoBehaviour
     [Header("UI")]
     [SerializeField] private Image icon;
     [SerializeField] private TextMeshProUGUI nameText;
+    [SerializeField] private TextMeshProUGUI bypriceText;
     [SerializeField] private TextMeshProUGUI countText;
 
     [Header("Button")]
@@ -98,6 +99,7 @@ public class SupplySellSlot : MonoBehaviour
             {
                 nameText.text = "";
                 if (countText != null) countText.text = "";
+                if (bypriceText != null) bypriceText.text = "";
                 if (buttonText != null) buttonText.text = "";
                 if (button != null) button.interactable = false;
                 return;
@@ -109,6 +111,10 @@ public class SupplySellSlot : MonoBehaviour
             int owned = SaveManager.Instance.GetResource(it.item_num);
             if (countText != null)
                 countText.text = $"{FormatKoreanNumber(owned)}°³";
+
+            int unitPrice = it.item_price;
+            if (bypriceText.text != null)
+                bypriceText.text = $"{FormatKoreanNumber(unitPrice)}¿ø";
 
             long totalPrice = (long)owned * it.item_price;
             if (buttonText != null)

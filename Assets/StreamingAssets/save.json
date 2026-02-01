@@ -1,0 +1,56 @@
+{
+  "player": {
+    "gold": 0,
+    "km": 0,
+    "currentCharacterId": 0,
+    "speed": 0.009999999776482582
+  },
+  "blackHole": {
+    "blackholeIncomeLv": 0,
+    "blackholeStorageLv": 0,
+    "BalckHoleIncome": 0.5,
+    "BlackHoleStorageMax": 100
+  },
+  "boost": {
+    "boostSpeed": 25.0,
+    "boostTime": 1.0,
+    "boostCoolTime": 60.0,
+    "boostUnlock": false,
+    "boostSpeedPrice": 1000,
+    "boostTimePrice": 500,
+    "boostEndUnixMs": 0,
+    "cooldownEndUnixMs": 0
+  },
+  "resources": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ]
+}

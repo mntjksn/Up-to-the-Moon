@@ -22,7 +22,7 @@ public class ResourceIncomeSystem : MonoBehaviour
 
         if (IsStorageFull()) return;
 
-        acc += Time.deltaTime * SaveManager.Instance.GetIncomeLv();
+        acc += Time.deltaTime * SaveManager.Instance.GetIncome();
 
         while (acc >= 1f)
         {

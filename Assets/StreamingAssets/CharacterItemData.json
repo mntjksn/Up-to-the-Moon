@@ -1,0 +1,154 @@
+{
+  "CharacterItem": [
+    {
+      "name": "손수건",
+      "sub": "가볍게 떠오르는 여행의 시작점",
+      "item_num": 0,
+      "item_price": 0,
+      "item_speed": 0.009999999776482582,
+      "item_unlock": true,
+      "item_upgrade": true,
+      "spritePath": "Character/0"
+    },
+    {
+      "name": "풍선 1개",
+      "sub": "작은 풍선이 만들어낸 첫 비행",
+      "item_num": 1,
+      "item_price": 500,
+      "item_speed": 0.05000000074505806,
+      "item_unlock": false,
+      "item_upgrade": false,
+      "spritePath": "Character/1"
+    },
+    {
+      "name": "풍선 2개",
+      "sub": "풍선 두 개로 더 높아진 비행",
+      "item_num": 2,
+      "item_price": 2000,
+      "item_speed": 0.15000000596046449,
+      "item_unlock": false,
+      "item_upgrade": false,
+      "spritePath": "Character/2"
+    },
+    {
+      "name": "풍선 3개",
+      "sub": "안정적인 비행을 위한 세 개의 풍선",
+      "item_num": 3,
+      "item_price": 10000,
+      "item_speed": 0.30000001192092898,
+      "item_unlock": false,
+      "item_upgrade": false,
+      "spritePath": "Character/3"
+    },
+    {
+      "name": "우산",
+      "sub": "바람을 타고 이동하는 즐거움",
+      "item_num": 4,
+      "item_price": 50000,
+      "item_speed": 1.25,
+      "item_unlock": false,
+      "item_upgrade": false,
+      "spritePath": "Character/4"
+    },
+    {
+      "name": "새",
+      "sub": "자유롭게 하늘을 나는 새의 감각",
+      "item_num": 5,
+      "item_price": 200000,
+      "item_speed": 2.5,
+      "item_unlock": false,
+      "item_upgrade": false,
+      "spritePath": "Character/5"
+    },
+    {
+      "name": "구름",
+      "sub": "구름 위를 걷는 듯한 부유감",
+      "item_num": 6,
+      "item_price": 500000,
+      "item_speed": 5.0,
+      "item_unlock": false,
+      "item_upgrade": false,
+      "spritePath": "Character/6"
+    },
+    {
+      "name": "대나무 헬리콥터",
+      "sub": "만화 속에서 보던 비행 장치",
+      "item_num": 7,
+      "item_price": 1000000,
+      "item_speed": 10.0,
+      "item_unlock": false,
+      "item_upgrade": false,
+      "spritePath": "Character/7"
+    },
+    {
+      "name": "열기구",
+      "sub": "천천히 떠오르는 거대한 열기구",
+      "item_num": 8,
+      "item_price": 5000000,
+      "item_speed": 30.0,
+      "item_unlock": false,
+      "item_upgrade": false,
+      "spritePath": "Character/8"
+    },
+    {
+      "name": "경비행기",
+      "sub": "본격적인 비행의 세계 진입",
+      "item_num": 9,
+      "item_price": 10000000,
+      "item_speed": 50.0,
+      "item_unlock": false,
+      "item_upgrade": false,
+      "spritePath": "Character/9"
+    },
+    {
+      "name": "제트기",
+      "sub": "초고속으로 가르는 하늘",
+      "item_num": 10,
+      "item_price": 30000000,
+      "item_speed": 75.0,
+      "item_unlock": false,
+      "item_upgrade": false,
+      "spritePath": "Character/10"
+    },
+    {
+      "name": "로켓",
+      "sub": "우주를 향한 비행의 시작",
+      "item_num": 11,
+      "item_price": 50000000,
+      "item_speed": 100.0,
+      "item_unlock": false,
+      "item_upgrade": false,
+      "spritePath": "Character/11"
+    },
+    {
+      "name": "날개",
+      "sub": "하늘을 지배하는 강력한 날개",
+      "item_num": 12,
+      "item_price": 100000000,
+      "item_speed": 150.0,
+      "item_unlock": false,
+      "item_upgrade": false,
+      "spritePath": "Character/12"
+    },
+    {
+      "name": "아이언맨",
+      "sub": "히어로가 된 듯한 비행감",
+      "item_num": 13,
+      "item_price": 500000000,
+      "item_speed": 200.0,
+      "item_unlock": false,
+      "item_upgrade": false,
+      "spritePath": "Character/13"
+    },
+    {
+      "name": "슈퍼맨",
+      "sub": "최강의 비행 능력 해방",
+      "item_num": 14,
+      "item_price": 1000000000,
+      "item_speed": 300.0,
+      "item_unlock": false,
+      "item_upgrade": false,
+      "spritePath": "Character/14"
+    }
+  ]
+}

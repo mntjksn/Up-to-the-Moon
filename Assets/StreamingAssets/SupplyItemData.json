@@ -1,0 +1,245 @@
+{
+  "SupplyItem": [
+    {
+      "name": "산소",
+      "sub": "생명의 기운",
+      "item_num": 0,
+      "item_price": 1,
+      "zoneMinKm": 0,
+      "spritePath": "Supply/0"
+    },
+    {
+      "name": "이산화탄소",
+      "sub": "숨의 그림자",
+      "item_num": 1,
+      "item_price": 2,
+      "zoneMinKm": 2,
+      "spritePath": "Supply/1"
+    },
+    {
+      "name": "구름 조각",
+      "sub": "하늘의 솜털",
+      "item_num": 2,
+      "item_price": 3,
+      "zoneMinKm": 5,
+      "spritePath": "Supply/2"
+    },
+    {
+      "name": "빗방울",
+      "sub": "하늘의 물방울",
+      "item_num": 3,
+      "item_price": 6,
+      "zoneMinKm": 10,
+      "spritePath": "Supply/3"
+    },
+    {
+      "name": "바람 조각",
+      "sub": "흐름의 파편",
+      "item_num": 4,
+      "item_price": 10,
+      "zoneMinKm": 18,
+      "spritePath": "Supply/4"
+    },
+    {
+      "name": "먹구름 조각",
+      "sub": "폭풍의 전조",
+      "item_num": 5,
+      "item_price": 19,
+      "zoneMinKm": 28,
+      "spritePath": "Supply/5"
+    },
+    {
+      "name": "눈송이",
+      "sub": "차가운 결정",
+      "item_num": 6,
+      "item_price": 34,
+      "zoneMinKm": 40,
+      "spritePath": "Supply/6"
+    },
+    {
+      "name": "우박",
+      "sub": "단단한 겨울",
+      "item_num": 7,
+      "item_price": 61,
+      "zoneMinKm": 60,
+      "spritePath": "Supply/7"
+    },
+    {
+      "name": "서리 결정",
+      "sub": "고요한 얼음빛",
+      "item_num": 8,
+      "item_price": 110,
+      "zoneMinKm": 85,
+      "spritePath": "Supply/8"
+    },
+    {
+      "name": "무지개 조각",
+      "sub": "빛의 굴절",
+      "item_num": 9,
+      "item_price": 200,
+      "zoneMinKm": 120,
+      "spritePath": "Supply/9"
+    },
+    {
+      "name": "번개 조각",
+      "sub": "순간의 섬광",
+      "item_num": 10,
+      "item_price": 360,
+      "zoneMinKm": 170,
+      "spritePath": "Supply/10"
+    },
+    {
+      "name": "오로라 가루",
+      "sub": "밤하늘의 춤",
+      "item_num": 11,
+      "item_price": 640,
+      "zoneMinKm": 230,
+      "spritePath": "Supply/11"
+    },
+    {
+      "name": "햇빛 결정",
+      "sub": "태양의 조각",
+      "item_num": 12,
+      "item_price": 1150,
+      "zoneMinKm": 300,
+      "spritePath": "Supply/12"
+    },
+
+    {
+      "name": "별가루",
+      "sub": "밤의 티끌",
+      "item_num": 13,
+      "item_price": 2100,
+      "zoneMinKm": 420,
+      "spritePath": "Supply/13"
+    },
+    {
+      "name": "운석 가루",
+      "sub": "하늘에서 온 돌",
+      "item_num": 14,
+      "item_price": 3750,
+      "zoneMinKm": 580,
+      "spritePath": "Supply/14"
+    },
+    {
+      "name": "우주 먼지",
+      "sub": "무중력의 먼지",
+      "item_num": 15,
+      "item_price": 6750,
+      "zoneMinKm": 780,
+      "spritePath": "Supply/15"
+    },
+    {
+      "name": "진공 결정",
+      "sub": "텅 빈 결정",
+      "item_num": 16,
+      "item_price": 12150,
+      "zoneMinKm": 1050,
+      "spritePath": "Supply/16"
+    },
+    {
+      "name": "달 먼지",
+      "sub": "회색의 흔적",
+      "item_num": 17,
+      "item_price": 21900,
+      "zoneMinKm": 1400,
+      "spritePath": "Supply/17"
+    },
+    {
+      "name": "월석 조각",
+      "sub": "달의 파편",
+      "item_num": 18,
+      "item_price": 39400,
+      "zoneMinKm": 1900,
+      "spritePath": "Supply/18"
+    },
+    {
+      "name": "성운 가루",
+      "sub": "별의 안개",
+      "item_num": 19,
+      "item_price": 71000,
+      "zoneMinKm": 2600,
+      "spritePath": "Supply/19"
+    },
+    {
+      "name": "성운 에너지",
+      "sub": "안개의 맥동",
+      "item_num": 20,
+      "item_price": 128000,
+      "zoneMinKm": 3600,
+      "spritePath": "Supply/20"
+    },
+    {
+      "name": "별빛 결정",
+      "sub": "차가운 별빛",
+      "item_num": 21,
+      "item_price": 230000,
+      "zoneMinKm": 5200,
+      "spritePath": "Supply/21"
+    },
+    {
+      "name": "별의 심장",
+      "sub": "별의 핵",
+      "item_num": 22,
+      "item_price": 414000,
+      "zoneMinKm": 7600,
+      "spritePath": "Supply/22"
+    },
+    {
+      "name": "광휘 조각",
+      "sub": "눈부신 잔광",
+      "item_num": 23,
+      "item_price": 746000,
+      "zoneMinKm": 11000,
+      "spritePath": "Supply/23"
+    },
+    {
+      "name": "프리즘 결정",
+      "sub": "빛을 쪼갠 결정",
+      "item_num": 24,
+      "item_price": 1343000,
+      "zoneMinKm": 16000,
+      "spritePath": "Supply/24"
+    },
+    {
+      "name": "태양 에너지",
+      "sub": "태양의 열",
+      "item_num": 25,
+      "item_price": 2417000,
+      "zoneMinKm": 24000,
+      "spritePath": "Supply/25"
+    },
+    {
+      "name": "루나 에너지",
+      "sub": "달의 맥박",
+      "item_num": 26,
+      "item_price": 4340000,
+      "zoneMinKm": 36000,
+      "spritePath": "Supply/26"
+    },
+    {
+      "name": "별의 숨결",
+      "sub": "별들의 호흡",
+      "item_num": 27,
+      "item_price": 7800000,
+      "zoneMinKm": 60000,
+      "spritePath": "Supply/27"
+    },
+    {
+      "name": "성운 심장",
+      "sub": "성운의 중심",
+      "item_num": 28,
+      "item_price": 15000000,
+      "zoneMinKm": 110000,
+      "spritePath": "Supply/28"
+    },
+    {
+      "name": "창조의 파편",
+      "sub": "세계의 씨앗",
+      "item_num": 29,
+      "item_price": 50000000,
+      "zoneMinKm": 200000,
+      "spritePath": "Supply/29"
+    }
+  ]
+}
