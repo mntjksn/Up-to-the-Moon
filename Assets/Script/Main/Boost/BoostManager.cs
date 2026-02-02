@@ -140,43 +140,42 @@ public class BoostManager : MonoBehaviour
 
         ApplyUI(true);
         RefreshUpgradeUI();
+        MissionProgressManager.Instance?.SetUnlocked("boost_unlock", true);
     }
 
     private void UpgradeSpeed()
     {
-        if (SaveManager.Instance == null || SaveManager.Instance.Data == null) return;
-        var b = SaveManager.Instance.Data.boost;
+        var sm = SaveManager.Instance;
+        if (sm == null || sm.Data == null) return;
+
+        var b = sm.Data.boost;
         if (b == null || !b.boostUnlock) return;
 
-        if (SaveManager.Instance.GetGold() < b.boostSpeedPrice) return;
+        if (sm.GetGold() < b.boostSpeedPrice) return;
 
-        // 돈 차감
-        SaveManager.Instance.AddGold(-b.boostSpeedPrice);
+        sm.AddGold(-b.boostSpeedPrice);
 
-        // 수치 25% 증가(무제한)
-        b.boostSpeed += 25f;
+        float newSpeed = b.boostSpeed + 25f;
+        sm.SetBoostSpeed(newSpeed);   // 여기서 미션 SetValue도 같이 됨
 
-        // 가격 2배
         b.boostSpeedPrice *= 2;
 
-        SaveManager.Instance.Save();
+        sm.Save();
         RefreshUpgradeUI();
     }
 
     private void UpgradeTime()
     {
         var sm = SaveManager.Instance;
-        if (sm == null) return;
+        if (sm == null || sm.Data == null) return;
 
         var b = sm.Data.boost;
-        if (!b.boostUnlock) return;
+        if (b == null || !b.boostUnlock) return;
 
-        float maxTime = 30f;   // 최대 지속시간
-
-        // 이미 최대면 더 못 올리게
+        float maxTime = 30f;
         if (b.boostTime >= maxTime)
         {
-            b.boostTime = maxTime;
+            sm.SetBoostTime(maxTime); // 혹시 캡 도달 시에도 미션 값 동기화
             sm.Save();
             RefreshUpgradeUI();
             return;
@@ -186,13 +185,11 @@ public class BoostManager : MonoBehaviour
 
         sm.AddGold(-b.boostTimePrice);
 
-        // 25% 증가
         float next = b.boostTime * 1.25f;
+        float newTime = Mathf.Min(next, maxTime);
 
-        // 45초 초과 방지
-        b.boostTime = Mathf.Min(next, maxTime);
+        sm.SetBoostTime(newTime);     // 여기서 미션 SetValue도 같이 됨
 
-        // 가격 2배
         b.boostTimePrice *= 2;
 
         sm.Save();

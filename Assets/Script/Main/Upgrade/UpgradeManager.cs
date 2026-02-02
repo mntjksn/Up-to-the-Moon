@@ -110,5 +110,4 @@ public class UpgradeManager : MonoBehaviour
                 slots[i].Refresh();
         }
     }
-
 }

@@ -61,15 +61,15 @@
       "costs": [
         {
           "itemId": 7,
-          "count": 1500
-        },
-        {
-          "itemId": 8,
           "count": 500
         },
         {
+          "itemId": 8,
+          "count": 300
+        },
+        {
           "itemId": 9,
-          "count": 200
+          "count": 100
         }
       ]
     },
@@ -78,7 +78,7 @@
       "costs": [
         {
           "itemId": 8,
-          "count": 3000
+          "count": 1500
         },
         {
           "itemId": 10,

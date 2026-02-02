@@ -23,6 +23,7 @@ public class HUDDistanceSpeed : MonoBehaviour
 
         // 목표 속도
         float targetSpeed = baseSpeed * speedMultiplier;
+        MissionProgressManager.Instance?.SetValue("player_speed", targetSpeed);
 
         // 부드럽게 변화
         currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, Time.deltaTime * 3f);
@@ -32,6 +33,7 @@ public class HUDDistanceSpeed : MonoBehaviour
 
         // 값 가져오기
         float km = SaveManager.Instance.GetKm();
+        MissionProgressManager.Instance?.SetValue("distance_km", km);
 
         // 천 단위 콤마 적용
         if (kmText != null)

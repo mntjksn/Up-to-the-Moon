@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -6,6 +7,9 @@ public class MainUIController : MonoBehaviour
 {
     [Header("Gold")]
     [SerializeField] private TextMeshProUGUI goldText;
+
+    [Header("Storage Full Blink")]
+    [SerializeField] private float storageBlinkInterval = 0.5f;
 
     [Header("Storage")]
     [SerializeField] private TextMeshProUGUI storageText;
@@ -34,6 +38,9 @@ public class MainUIController : MonoBehaviour
     private float speedMultiplier = 1f;
     private float currentSpeed;
 
+    private Coroutine storageBlinkRoutine;
+    private Color storageOriginalColor;
+
     private void Start()
     {
         if (SaveManager.Instance != null)
@@ -41,6 +48,9 @@ public class MainUIController : MonoBehaviour
 
         if (boostController == null)
             boostController = FindObjectOfType<BoostController>(true); // 비활성 포함
+
+        if (storageText != null)
+            storageOriginalColor = storageText.color;
     }
 
     private void Update()
@@ -62,6 +72,9 @@ public class MainUIController : MonoBehaviour
         // 값 가져오기
         float km = SaveManager.Instance.GetKm();
         long gold = SaveManager.Instance.GetGold();
+
+        MissionProgressManager.Instance?.SetValue("boost_speed", SaveManager.Instance.GetBoostSpeed());
+        MissionProgressManager.Instance?.SetValue("boost_time", SaveManager.Instance.GetBoostTime());
 
         long total = 0;
         for (int i = 0; i < data.resources.Length; i++)
@@ -96,6 +109,7 @@ public class MainUIController : MonoBehaviour
 
         if (storagemaxText.text != null)
             storagemaxText.text = $"최대 적재량 : {FormatKoreanNumber(SaveManager.Instance.Data.blackHole.BlackHoleStorageMax)}개";
+        CheckStorageBlink(total);
 
         RefreshBoostUI();
     }
@@ -223,9 +237,51 @@ public class MainUIController : MonoBehaviour
         return neg ? "-" + sb.ToString() : sb.ToString();
     }
 
-    // 업그레이드에서 호출
-    public void SetSpeedMultiplier(float m)
+    private void CheckStorageBlink(long totalStorage)
     {
-        speedMultiplier = Mathf.Max(0f, m);
+        long maxCap = SaveManager.Instance.Data.blackHole.BlackHoleStorageMax;
+        bool isFull = totalStorage >= maxCap;
+
+        if (isFull)
+            StartStorageBlink();
+        else
+            StopStorageBlink();
+    }
+
+    private void StartStorageBlink()
+    {
+        if (storageText == null) return;
+
+        if (storageBlinkRoutine == null)
+            storageBlinkRoutine = StartCoroutine(StorageBlink());
+    }
+
+    private void StopStorageBlink()
+    {
+        if (storageBlinkRoutine != null)
+        {
+            StopCoroutine(storageBlinkRoutine);
+            storageBlinkRoutine = null;
+        }
+
+        if (storageText != null)
+        {
+            storageText.enabled = true;
+            storageText.color = storageOriginalColor; // 원래색 복구
+        }
+    }
+
+    private IEnumerator StorageBlink()
+    {
+        while (true)
+        {
+            storageText.color = Color.red;
+            storageText.enabled = true;
+            yield return new WaitForSeconds(storageBlinkInterval);
+
+            storageText.color = storageOriginalColor;
+            storageText.enabled = true;
+            yield return new WaitForSeconds(storageBlinkInterval);
+        }
     }
 }

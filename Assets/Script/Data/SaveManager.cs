@@ -156,6 +156,7 @@ public class SaveManager : MonoBehaviour
         Data.player.gold = (long)Mathf.Min(Data.player.gold + amount, GOLD_MAX);
         Save();
         OnGoldChanged?.Invoke();
+        MissionProgressManager.Instance?.SetValue("gold", GetGold());
     }
 
     public float GetKm() => Data.player.km;
@@ -204,6 +205,24 @@ public class SaveManager : MonoBehaviour
     }
     public event System.Action<bool> OnBoostUnlockChanged;
 
+    public float GetBoostSpeed() => Data.boost.boostSpeed;
+
+    public void SetBoostSpeed(float speed)
+    {
+        Data.boost.boostSpeed = speed;
+        Save();
+        MissionProgressManager.Instance?.SetValue("boost_speed", speed);
+    }
+
+    public float GetBoostTime() => Data.boost.boostTime;
+
+    public void SetBoostTime(float time)
+    {
+        Data.boost.boostTime = time;
+        Save();
+        MissionProgressManager.Instance?.SetValue("boost_time", time);
+    }
+
 
     public int GetResource(int id)
     {
@@ -217,6 +236,7 @@ public class SaveManager : MonoBehaviour
         Data.resources[id] = Mathf.Max(0, Data.resources[id] + amount);
         Save();
         OnResourceChanged?.Invoke();
+        MissionProgressManager.Instance?.Add("resource_collect_total", amount);
     }
 
     public float GetIncome() => Data.blackHole.BalckHoleIncome;

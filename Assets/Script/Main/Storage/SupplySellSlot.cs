@@ -144,6 +144,8 @@ public class SupplySellSlot : MonoBehaviour
 
         // 이벤트로 Refresh 되지만, 클릭 직후 즉시 반영 원하면 한 번 더
         Refresh();
+
+        MissionProgressManager.Instance?.Add("resource_sell_total", owned);
     }
 
     private string FormatKoreanNumber(long n)

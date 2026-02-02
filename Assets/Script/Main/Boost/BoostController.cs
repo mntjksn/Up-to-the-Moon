@@ -73,6 +73,8 @@ public class BoostController : MonoBehaviour
 
     private IEnumerator BoostRoutine()
     {
+        MissionProgressManager.Instance?.Add("boost_use_count", 1);
+
         var sm = SaveManager.Instance;
         if (sm == null || sm.Data == null || sm.Data.boost == null) yield break;
 

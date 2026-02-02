@@ -69,6 +69,8 @@ public class BlackholeUpgradeUI : MonoBehaviour
 
     private void BuyIncome()
     {
+        MissionProgressManager.Instance?.Add("blackhole_income_upgrade_count", 1);
+
         int lv = SaveManager.Instance.GetIncomeLv();
         if (lv >= maxIncomeLv) return;
 
@@ -120,9 +122,11 @@ public class BlackholeUpgradeUI : MonoBehaviour
         // ex) 1000원 시작, 1.35배씩 증가
         double basePrice = 100;
         double mult = 2.25;
-        double v = basePrice * System.Math.Pow(mult, lv);
-        if (v > long.MaxValue) return long.MaxValue;
-        return (long)v;
+        double raw = basePrice * System.Math.Pow(mult, lv);
+
+        if (raw > long.MaxValue) return long.MaxValue;
+
+        long v = (long)raw; return CeilTo(v, 100);
     }
 
     // =========================
@@ -176,10 +180,12 @@ public class BlackholeUpgradeUI : MonoBehaviour
         // 예시: 1000에서 시작해서 점점 커지게
         // 원하면 “1000→5000→…” 너가 원하는 표로 바꿔줄게.
         long baseCap = 100;
-        double mult = 2.5; // 25%씩 증가
-        double v = baseCap * System.Math.Pow(mult, lv);
-        if (v > long.MaxValue) return long.MaxValue;
-        return (long)v;
+        double mult = 2.8; // 25%씩 증가
+        double raw = baseCap * System.Math.Pow(mult, lv);
+
+        if (raw > long.MaxValue) return long.MaxValue;
+
+        long v = (long)raw; return CeilTo(v, 100);
     }
 
     private long GetStoragePrice(int lv)
@@ -187,9 +193,19 @@ public class BlackholeUpgradeUI : MonoBehaviour
         // ex) 2000원 시작, 1.4배씩 증가
         double basePrice = 500;
         double mult = 5.5;
-        double v = basePrice * System.Math.Pow(mult, lv);
-        if (v > long.MaxValue) return long.MaxValue;
-        return (long)v;
+        double raw = basePrice * System.Math.Pow(mult, lv);
+        if (raw > long.MaxValue) return long.MaxValue;
+
+        long v = (long)raw;
+
+        return CeilTo(v, 500);
+    }
+
+    private long CeilTo(long value, long step)
+    {
+        if (step <= 0) return value;
+        if (value <= 0) return 0;
+        return ((value + step - 1) / step) * step;
     }
 
     // =========================

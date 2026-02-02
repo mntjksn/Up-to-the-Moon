@@ -223,6 +223,8 @@ public class UpgradeSlot : MonoBehaviour
             SaveManager.Instance.SetSpeed(item.item_speed);
         }
 
+        MissionProgressManager.Instance?.Add("character_upgrade_count", 1);
+
         Refresh();
     }
 
