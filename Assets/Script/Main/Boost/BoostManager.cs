@@ -8,230 +8,210 @@ public class BoostManager : MonoBehaviour
     [SerializeField] private long unlockPrice = 5000;
 
     [Header("Canvas2 Panels (Upgrade&Booster Window)")]
-    [SerializeField] private GameObject panelBoost_Locked;   // Canvas2 > Panel_Boost (해금 전)
-    [SerializeField] private GameObject panelBoost_Main;     // Canvas2 > Panel_Boost_Main (해금 후)
+    [SerializeField] private GameObject panelBoost_Locked;
+    [SerializeField] private GameObject panelBoost_Main;
 
     [Header("Unlock Button")]
     [SerializeField] private Button buyButton;
 
     [Header("Upgrade Buttons")]
-    [SerializeField] private Button speedUpButton;  // "부스터 속도 업그레이드"
-    [SerializeField] private Button timeUpButton;   // "부스터 지속시간 업그레이드"
+    [SerializeField] private Button speedUpButton;
+    [SerializeField] private Button timeUpButton;
 
     [Header("Upgrade Price Text")]
-    [SerializeField] private TextMeshProUGUI speedPriceText; // 1000원 텍스트
-    [SerializeField] private TextMeshProUGUI timePriceText;  // 500원 텍스트
+    [SerializeField] private TextMeshProUGUI speedPriceText;
+    [SerializeField] private TextMeshProUGUI timePriceText;
 
     [Header("Upgrade Label Text (optional)")]
-    [SerializeField] private TextMeshProUGUI speedDescText;  // +25% 증가 같은 설명
+    [SerializeField] private TextMeshProUGUI speedDescText;
     [SerializeField] private TextMeshProUGUI timeDescText;
 
     [Header("SFX")]
     [SerializeField] private AudioSource sfx;
 
+    private const float TIME_CAP = 30f;
+
     private void OnEnable()
     {
-        // 해금 버튼
-        if (buyButton != null)
-        {
-            buyButton.onClick.RemoveListener(BuyBoostUnlock);
-            buyButton.onClick.AddListener(BuyBoostUnlock);
-        }
-
-        // 업그레이드 버튼
-        if (speedUpButton != null)
-        {
-            speedUpButton.onClick.RemoveListener(UpgradeSpeed);
-            speedUpButton.onClick.AddListener(UpgradeSpeed);
-        }
-
-        if (timeUpButton != null)
-        {
-            timeUpButton.onClick.RemoveListener(UpgradeTime);
-            timeUpButton.onClick.AddListener(UpgradeTime);
-        }
-
+        BindButtons(true);
         RefreshFromSave();
     }
 
     private void OnDisable()
     {
-        if (buyButton != null) buyButton.onClick.RemoveListener(BuyBoostUnlock);
-        if (speedUpButton != null) speedUpButton.onClick.RemoveListener(UpgradeSpeed);
-        if (timeUpButton != null) timeUpButton.onClick.RemoveListener(UpgradeTime);
+        BindButtons(false);
+    }
+
+    private void BindButtons(bool bind)
+    {
+        if (buyButton != null)
+        {
+            if (bind) buyButton.onClick.AddListener(BuyBoostUnlock);
+            else buyButton.onClick.RemoveListener(BuyBoostUnlock);
+        }
+
+        if (speedUpButton != null)
+        {
+            if (bind) speedUpButton.onClick.AddListener(UpgradeSpeed);
+            else speedUpButton.onClick.RemoveListener(UpgradeSpeed);
+        }
+
+        if (timeUpButton != null)
+        {
+            if (bind) timeUpButton.onClick.AddListener(UpgradeTime);
+            else timeUpButton.onClick.RemoveListener(UpgradeTime);
+        }
     }
 
     private void RefreshFromSave()
     {
-        if (SaveManager.Instance == null || SaveManager.Instance.Data == null) return;
-        if (SaveManager.Instance.Data.boost == null) return;
+        SaveManager sm = SaveManager.Instance;
+        if (sm == null) return;
 
-        bool unlocked = SaveManager.Instance.Data.boost.boostUnlock;
+        SaveData.Boost b;
+        if (!TryGetBoost(sm, out b)) return;
+
+        bool unlocked = sm.IsBoostUnlocked();
         ApplyUI(unlocked);
-        RefreshUpgradeUI();
+        RefreshUpgradeUI(sm, b);
     }
 
     private void ApplyUI(bool unlocked)
     {
-        // Canvas2 패널 토글
         if (panelBoost_Locked != null) panelBoost_Locked.SetActive(!unlocked);
         if (panelBoost_Main != null) panelBoost_Main.SetActive(unlocked);
 
-        // 구매 버튼은 해금 후 비활성
         if (buyButton != null) buyButton.interactable = !unlocked;
     }
 
-    private void RefreshUpgradeUI()
+    private void RefreshUpgradeUI(SaveManager sm, SaveData.Boost b)
     {
-        if (SaveManager.Instance == null || SaveManager.Instance.Data == null) return;
-        var b = SaveManager.Instance.Data.boost;
-        if (b == null) return;
+        long gold = sm.GetGold();
+        bool unlocked = sm.IsBoostUnlocked();
 
-        long gold = SaveManager.Instance.GetGold();
-        bool unlocked = b.boostUnlock;
+        bool timeCapReached = sm.GetBoostTime() >= TIME_CAP;
 
-        // ===== 캡 설정 =====
-        const float TIME_CAP = 30f;
-        bool timeCapReached = b.boostTime >= TIME_CAP;
-
-        // ===== 가격 표시 =====
         if (speedPriceText != null)
-            speedPriceText.text = $"{FormatKoreanNumber(b.boostSpeedPrice)}원";
+            speedPriceText.text = NumberFormatter.FormatKorean(b.boostSpeedPrice) + "원";
 
-        // 지속시간이 캡이면 가격 대신 MAX 표기
         if (timePriceText != null)
-            timePriceText.text = timeCapReached ? "MAX" : $"{FormatKoreanNumber(b.boostTimePrice)}원";
+            timePriceText.text = timeCapReached ? "MAX" : (NumberFormatter.FormatKorean(b.boostTimePrice) + "원");
 
-        // ===== 설명(옵션) =====
         if (speedDescText != null)
-            speedDescText.text = $"+25% 증가 (현재: {b.boostSpeed:N0}%)";
+            speedDescText.text = "+25% 증가 (현재: " + sm.GetBoostSpeed().ToString("N0") + "%)";
 
         if (timeDescText != null)
-            timeDescText.text = $"+25% 증가 (현재: {b.boostTime:0.##}초)";
+            timeDescText.text = "+25% 증가 (현재: " + sm.GetBoostTime().ToString("0.##") + "초)";
 
-        // ===== 버튼 잠금 조건 =====
-        // 골드 부족하면 잠금 + 해금 전이면 잠금
         if (speedUpButton != null)
             speedUpButton.interactable = unlocked && gold >= b.boostSpeedPrice;
 
-        // 시간 업글: 해금 + 골드 + 캡 미도달일 때만 활성
         if (timeUpButton != null)
             timeUpButton.interactable = unlocked && !timeCapReached && gold >= b.boostTimePrice;
 
         if (buyButton != null)
-        {
-            if (unlocked)
-                buyButton.interactable = false;
-            else
-                buyButton.interactable = gold >= unlockPrice;
-        }
+            buyButton.interactable = !unlocked && gold >= unlockPrice;
     }
 
     private void BuyBoostUnlock()
     {
-        if (SaveManager.Instance == null || SaveManager.Instance.Data == null) return;
-        var b = SaveManager.Instance.Data.boost;
-        if (b == null) return;
+        SaveManager sm = SaveManager.Instance;
+        if (sm == null) return;
 
-        sfx.mute = !SoundManager.Instance.IsSfxOn();
-        sfx.Play();
+        SaveData.Boost b;
+        if (!TryGetBoost(sm, out b)) return;
 
-        if (b.boostUnlock) return;
-        if (SaveManager.Instance.GetGold() < unlockPrice) return;
+        if (sm.IsBoostUnlocked()) return;
+        if (sm.GetGold() < unlockPrice) return;
 
-        SaveManager.Instance.AddGold(-unlockPrice);
+        PlaySfx();
 
-        b.boostUnlock = true;
-        SaveManager.Instance.Save();
+        sm.AddGold(-unlockPrice);
+        sm.SetBoostUnlocked(true);
 
         ApplyUI(true);
-        RefreshUpgradeUI();
-        MissionProgressManager.Instance?.SetUnlocked("boost_unlock", true);
+        RefreshUpgradeUI(sm, b);
+
+        if (MissionProgressManager.Instance != null)
+            MissionProgressManager.Instance.SetUnlocked("boost_unlock", true);
     }
 
     private void UpgradeSpeed()
     {
-        var sm = SaveManager.Instance;
-        if (sm == null || sm.Data == null) return;
+        SaveManager sm = SaveManager.Instance;
+        if (sm == null) return;
+        if (!sm.IsBoostUnlocked()) return;
 
-        var b = sm.Data.boost;
-        if (b == null || !b.boostUnlock) return;
-
-        sfx.mute = !SoundManager.Instance.IsSfxOn();
-        sfx.Play();
+        SaveData.Boost b;
+        if (!TryGetBoost(sm, out b)) return;
 
         if (sm.GetGold() < b.boostSpeedPrice) return;
 
+        PlaySfx();
+
         sm.AddGold(-b.boostSpeedPrice);
 
-        float newSpeed = b.boostSpeed + 25f;
-        sm.SetBoostSpeed(newSpeed);   // 여기서 미션 SetValue도 같이 됨
+        float newSpeed = sm.GetBoostSpeed() + 25f;
+        sm.SetBoostSpeed(newSpeed);
 
         b.boostSpeedPrice *= 2;
-
         sm.Save();
-        RefreshUpgradeUI();
+
+        RefreshUpgradeUI(sm, b);
     }
 
     private void UpgradeTime()
     {
-        var sm = SaveManager.Instance;
-        if (sm == null || sm.Data == null) return;
+        SaveManager sm = SaveManager.Instance;
+        if (sm == null) return;
+        if (!sm.IsBoostUnlocked()) return;
 
-        var b = sm.Data.boost;
-        if (b == null || !b.boostUnlock) return;
+        SaveData.Boost b;
+        if (!TryGetBoost(sm, out b)) return;
 
-        sfx.mute = !SoundManager.Instance.IsSfxOn();
-        sfx.Play();
-
-        float maxTime = 30f;
-        if (b.boostTime >= maxTime)
+        float cur = sm.GetBoostTime();
+        if (cur >= TIME_CAP)
         {
-            sm.SetBoostTime(maxTime); // 혹시 캡 도달 시에도 미션 값 동기화
+            sm.SetBoostTime(TIME_CAP);
             sm.Save();
-            RefreshUpgradeUI();
+            RefreshUpgradeUI(sm, b);
             return;
         }
 
         if (sm.GetGold() < b.boostTimePrice) return;
 
+        PlaySfx();
+
         sm.AddGold(-b.boostTimePrice);
 
-        float next = b.boostTime * 1.25f;
-        float newTime = Mathf.Min(next, maxTime);
-
-        sm.SetBoostTime(newTime);     // 여기서 미션 SetValue도 같이 됨
+        float next = cur * 1.25f;
+        float newTime = Mathf.Min(next, TIME_CAP);
+        sm.SetBoostTime(newTime);
 
         b.boostTimePrice *= 2;
-
         sm.Save();
-        RefreshUpgradeUI();
+
+        RefreshUpgradeUI(sm, b);
     }
 
-    private string FormatKoreanNumber(long n)
+    private bool TryGetBoost(SaveManager sm, out SaveData.Boost boost)
     {
-        if (n == 0) return "0";
-        bool neg = n < 0;
-        ulong v = (ulong)(neg ? -n : n);
+        boost = null;
+        if (sm == null) return false;
+        if (sm.Data == null) return false;
+        if (sm.Data.boost == null) return false;
 
-        const ulong MAN = 10_000UL;
-        const ulong EOK = 100_000_000UL;
-        const ulong JO = 1_000_000_000_000UL;
-        const ulong GYEONG = 10_000_000_000_000_000UL;
+        boost = sm.Data.boost;
+        return true;
+    }
 
-        ulong gyeong = v / GYEONG; v %= GYEONG;
-        ulong jo = v / JO; v %= JO;
-        ulong eok = v / EOK; v %= EOK;
-        ulong man = v / MAN; v %= MAN;
-        ulong rest = v;
+    private void PlaySfx()
+    {
+        if (sfx == null) return;
 
-        System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        if (gyeong > 0) sb.Append(gyeong).Append("경");
-        if (jo > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(jo).Append("조"); }
-        if (eok > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(eok).Append("억"); }
-        if (man > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(man).Append("만"); }
-        if (rest > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(rest); }
+        SoundManager snd = SoundManager.Instance;
+        if (snd != null) sfx.mute = !snd.IsSfxOn();
 
-        return neg ? "-" + sb.ToString() : sb.ToString();
+        sfx.Play();
     }
 }

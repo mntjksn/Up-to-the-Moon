@@ -1,17 +1,19 @@
 using UnityEngine;
 
+// 게임 전체 사운드(BGM, SFX) 상태 관리
 public class SoundManager : MonoBehaviour
 {
     public static SoundManager Instance;
 
     [Header("BGM")]
-    public AudioSource bgmSource;
+    [SerializeField] private AudioSource bgmSource;
 
     private bool bgmOn = true;
     private bool sfxOn = true;
 
     private void Awake()
     {
+        // 싱글톤 유지
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);

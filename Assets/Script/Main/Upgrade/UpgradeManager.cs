@@ -2,12 +2,13 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+// 캐릭터 업그레이드 슬롯 생성/관리 매니저
 public class UpgradeManager : MonoBehaviour
 {
     public static UpgradeManager Instance;
 
     [Header("UI")]
-    [SerializeField] private GameObject slotPrefab;   // SupplySlot 붙은 프리팹
+    [SerializeField] private GameObject slotPrefab;   // UpgradeSlot 붙은 프리팹
     [SerializeField] private Transform content;       // ScrollView Content
 
     [Header("Runtime Cache")]
@@ -17,6 +18,7 @@ public class UpgradeManager : MonoBehaviour
 
     private void Awake()
     {
+        // 싱글톤 유지
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -28,7 +30,7 @@ public class UpgradeManager : MonoBehaviour
 
     private void OnEnable()
     {
-        // 패널을 켤 때마다(혹은 씬 시작 때) 안전하게 빌드 시도
+        // 패널 열릴 때 안전하게 빌드
         if (buildRoutine == null)
             buildRoutine = StartCoroutine(BuildWhenReady());
     }
@@ -47,15 +49,15 @@ public class UpgradeManager : MonoBehaviour
         // 필수 참조 체크
         if (slotPrefab == null || content == null)
         {
-            Debug.LogError("[StorageManager] slotPrefab 또는 content가 비어있습니다.");
+            Debug.LogError("[UpgradeManager] slotPrefab 또는 content가 비어있습니다.");
             yield break;
         }
 
-        // ItemManager 생성될 때까지 대기
+        // CharacterManager 준비 대기
         while (CharacterManager.Instance == null)
             yield return null;
 
-        // 로드 완료될 때까지 대기 (너 코드에 IsLoaded 있음)
+        // 데이터 로드 완료 대기
         while (!CharacterManager.Instance.IsLoaded)
             yield return null;
 
@@ -63,7 +65,7 @@ public class UpgradeManager : MonoBehaviour
         if (CharacterManager.Instance.CharacterItem == null ||
             CharacterManager.Instance.CharacterItem.Count <= 0)
         {
-            Debug.LogError("[StorageManager] SupplyItem 데이터가 비어있습니다.");
+            Debug.LogError("[UpgradeManager] CharacterItem 데이터가 비어있습니다.");
             yield break;
         }
 
@@ -75,33 +77,31 @@ public class UpgradeManager : MonoBehaviour
 
     private void BuildSlots(int count)
     {
-        // 1) 기존 캐시/오브젝트 정리
+        // 기존 슬롯 정리
         slots.Clear();
 
-        // Content 아래 자식 전부 삭제 (마지막 1개 더 생김, 재호출 중복 생성 방지)
+        // Content 자식 삭제
         for (int i = content.childCount - 1; i >= 0; i--)
-        {
             Destroy(content.GetChild(i).gameObject);
-        }
 
-        // 2) 생성
+        // 슬롯 생성
         for (int i = 0; i < count; i++)
         {
             var obj = Instantiate(slotPrefab, content);
 
             if (!obj.TryGetComponent(out UpgradeSlot slot))
             {
-                Debug.LogError("[StorageManager] slotPrefab에 SupplySlot 컴포넌트가 없습니다!");
+                Debug.LogError("[UpgradeManager] slotPrefab에 UpgradeSlot 컴포넌트가 없습니다!");
                 Destroy(obj);
                 continue;
             }
 
-            // 슬롯 초기화
             slot.Setup(i);
             slots.Add(slot);
         }
     }
 
+    // 전체 슬롯 UI 갱신
     public void RefreshAllSlots()
     {
         for (int i = 0; i < slots.Count; i++)

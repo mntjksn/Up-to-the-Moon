@@ -19,7 +19,7 @@ public class MainUIController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI kmText;
     [SerializeField] private TextMeshProUGUI speedText;
 
-    [Header("BalckHole")]
+    [Header("BlackHole")]
     [SerializeField] private TextMeshProUGUI incomeText;
     [SerializeField] private TextMeshProUGUI storagemaxText;
 
@@ -27,97 +27,89 @@ public class MainUIController : MonoBehaviour
     [SerializeField] private GameObject boostPanel;
 
     [Header("Boost UI")]
-    [SerializeField] private TextMeshProUGUI boostSpeedText;     // "부스터 추가 속도 : 150%"
-    [SerializeField] private TextMeshProUGUI boostTimeText;      // "부스터 지속 시간 : 35.55초"
-    [SerializeField] private TextMeshProUGUI boostCoolPercentText; // "쿨타임 35%"
-    [SerializeField] private Slider boostCoolSlider;             // 슬라이더
+    [SerializeField] private TextMeshProUGUI boostSpeedText;
+    [SerializeField] private TextMeshProUGUI boostTimeText;
+    [SerializeField] private TextMeshProUGUI boostCoolPercentText;
+    [SerializeField] private Slider boostCoolSlider;
 
     [Header("Boost Ref (optional)")]
-    [SerializeField] private BoostController boostController;    // 안 넣어도 자동으로 찾게 해둠
-
-    private float speedMultiplier = 1f;
-    private float currentSpeed;
+    [SerializeField] private BoostController boostController;
 
     private Coroutine storageBlinkRoutine;
     private Color storageOriginalColor;
 
     private void Start()
     {
-        if (SaveManager.Instance != null)
-            currentSpeed = SaveManager.Instance.GetSpeed() * speedMultiplier;
-
         if (boostController == null)
-            boostController = FindObjectOfType<BoostController>(true); // 비활성 포함
+            boostController = FindObjectOfType<BoostController>(true);
 
         if (storageText != null)
             storageOriginalColor = storageText.color;
+
+        RefreshStaticUIOnce();
+        RefreshDynamicUI(); // 시작 프레임에 바로 표시
     }
 
     private void Update()
     {
-        if (SaveManager.Instance == null) return;
+        RefreshDynamicUI();
+        RefreshBoostUI();
+    }
 
-        var data = SaveManager.Instance.Data;
-        if (data == null || data.resources == null) return;
+    private void RefreshStaticUIOnce()
+    {
+        var sm = SaveManager.Instance;
+        if (sm == null || sm.Data == null) return;
 
-        // 목표 속도
-        float targetSpeed = SaveManager.Instance.GetSpeed() * speedMultiplier;
+        if (storagemaxText != null)
+            storagemaxText.text = $"최대 적재량 : {NumberFormatter.FormatKorean(sm.GetStorageMax())}개";
+    }
 
-        // 부드럽게 변화
-        currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, Time.deltaTime * 1.5f);
+    private void RefreshDynamicUI()
+    {
+        var sm = SaveManager.Instance;
+        if (sm == null || sm.Data == null) return;
 
-        // km 누적
-        SaveManager.Instance.AddKm(currentSpeed * Time.deltaTime);
+        float km = sm.GetKm();
+        long gold = sm.GetGold();
 
-        // 값 가져오기
-        float km = SaveManager.Instance.GetKm();
-        long gold = SaveManager.Instance.GetGold();
+        long totalStorage = sm.GetStorageUsed();
+        long maxStorage = sm.GetStorageMax();
 
-        MissionProgressManager.Instance?.SetValue("boost_speed", SaveManager.Instance.GetBoostSpeed());
-        MissionProgressManager.Instance?.SetValue("boost_time", SaveManager.Instance.GetBoostTime());
+        if (goldText != null)
+            goldText.text = $"{NumberFormatter.FormatKorean(gold)}원";
 
-        long total = 0;
-        for (int i = 0; i < data.resources.Length; i++)
-            total += data.resources[i];
+        if (storageText != null)
+            storageText.text = $"{NumberFormatter.FormatKorean(totalStorage)}개";
 
-
-        if (goldText.text != null)
-            goldText.text = $"{FormatKoreanNumber(gold)}원";
-
-        if (storageText.text != null)
-            storageText.text = $"{FormatKoreanNumber(total)}개";
-
-        if (stateText != null && BackgroundManager.Instance != null)
+        if (stateText != null && BackgroundManager.Instance != null && BackgroundManager.Instance.IsLoaded)
         {
-            var bg = BackgroundManager.Instance.GetBackgroundByKm(km);
-
-            if (bg != null)
-                stateText.text = $"현재 지역 : {bg.name}";
-            else
-                stateText.text = $"현재 지역 : -";
+            var bg = BackgroundManager.Instance.GetByKm(km);
+            stateText.text = (bg != null) ? $"현재 지역 : {bg.name}" : "현재 지역 : -";
         }
 
-        // 천 단위 콤마 적용
         if (kmText != null)
-            kmText.text = $"현재 고도 : {km.ToString("N2")} Km";
+            kmText.text = $"현재 고도 : {km:N2} Km";
 
         if (speedText != null)
-            speedText.text = $"현재 속도 : {currentSpeed.ToString("N2")} Km / s";
+            speedText.text = $"현재 속도 : {sm.GetSpeed():N2} Km / s";
 
-        if (incomeText.text != null)
-            incomeText.text = $"현재 수급 속도 : {SaveManager.Instance.GetIncome().ToString("N1")}개 / s";
+        if (incomeText != null)
+            incomeText.text = $"현재 수급 속도 : {sm.GetIncome():N1}개 / s";
 
-        if (storagemaxText.text != null)
-            storagemaxText.text = $"최대 적재량 : {FormatKoreanNumber(SaveManager.Instance.Data.blackHole.BlackHoleStorageMax)}개";
-        CheckStorageBlink(total);
+        if (storagemaxText != null)
+            storagemaxText.text = $"최대 적재량 : {NumberFormatter.FormatKorean(maxStorage)}개";
 
-        RefreshBoostUI();
+        CheckStorageBlink(totalStorage, maxStorage);
+
+        // boost_speed / boost_time는 SaveManager SetBoostSpeed/SetBoostTime에서 이미 미션 반영 중이었지?
+        // 여기서 매프레임 SetValue 하면 불필요해서 제거하는 게 맞음.
     }
 
     private void RefreshBoostUI()
     {
         var sm = SaveManager.Instance;
-        if (sm == null || sm.Data == null || sm.Data.boost == null)
+        if (sm == null || sm.Data?.boost == null)
         {
             if (boostPanel != null) boostPanel.SetActive(false);
             return;
@@ -129,14 +121,12 @@ public class MainUIController : MonoBehaviour
         if (boostPanel != null) boostPanel.SetActive(unlocked);
         if (!unlocked) return;
 
-        // 상단 고정 정보
         if (boostSpeedText != null)
             boostSpeedText.text = $"부스터 추가 속도 : {b.boostSpeed:N0}%";
 
         if (boostTimeText != null)
             boostTimeText.text = $"부스터 지속 시간 : {b.boostTime:0.##}초";
 
-        // 컨트롤러 없으면 기본 UI만
         if (boostController == null)
             boostController = FindObjectOfType<BoostController>(true);
 
@@ -144,12 +134,9 @@ public class MainUIController : MonoBehaviour
 
         if (boosting)
         {
-            // ===== 부스트 지속시간 모드 =====
             float totalDur = Mathf.Max(0.01f, Mathf.Clamp(b.boostTime, 0f, 45f));
-            float remainDur = boostController.GetBoostRemaining();
-            remainDur = Mathf.Clamp(remainDur, 0f, totalDur);
+            float remainDur = Mathf.Clamp(boostController.GetBoostRemaining(), 0f, totalDur);
 
-            // 슬라이더: 남은 시간이 줄어드는 게이지
             if (boostCoolSlider != null)
             {
                 boostCoolSlider.minValue = 0f;
@@ -157,7 +144,6 @@ public class MainUIController : MonoBehaviour
                 boostCoolSlider.value = remainDur;
             }
 
-            // 퍼센트 텍스트도 "지속"으로 바꾸고 싶으면
             if (boostCoolPercentText != null)
             {
                 float percent = (remainDur / totalDur) * 100f;
@@ -166,7 +152,6 @@ public class MainUIController : MonoBehaviour
         }
         else
         {
-            // ===== 쿨타임 모드 =====
             float totalCool = Mathf.Max(0.01f, b.boostCoolTime);
             float remainCool = 0f;
 
@@ -175,7 +160,6 @@ public class MainUIController : MonoBehaviour
 
             remainCool = Mathf.Clamp(remainCool, 0f, totalCool);
 
-            // 슬라이더: 남은 쿨타임이 줄어드는 게이지
             if (boostCoolSlider != null)
             {
                 boostCoolSlider.minValue = 0f;
@@ -191,61 +175,12 @@ public class MainUIController : MonoBehaviour
         }
     }
 
-    private string FormatKoreanNumber(long n)
+    private void CheckStorageBlink(long totalStorage, long maxStorage)
     {
-        if (n == 0) return "0";
+        bool isFull = (maxStorage > 0) && (totalStorage >= maxStorage);
 
-        // 음수도 안전하게
-        bool neg = n < 0;
-        ulong v = (ulong)(neg ? -n : n);
-
-        const ulong MAN = 10_000UL;                 // 10^4
-        const ulong EOK = 100_000_000UL;            // 10^8
-        const ulong JO = 1_000_000_000_000UL;      // 10^12
-        const ulong GYEONG = 10_000_000_000_000_000UL; // 10^16
-
-        ulong gyeong = v / GYEONG; v %= GYEONG;
-        ulong jo = v / JO; v %= JO;
-        ulong eok = v / EOK; v %= EOK;
-        ulong man = v / MAN; v %= MAN;
-        ulong rest = v;
-
-        System.Text.StringBuilder sb = new System.Text.StringBuilder();
-
-        if (gyeong > 0) sb.Append(gyeong).Append("경");
-        if (jo > 0)
-        {
-            if (sb.Length > 0) sb.Append(" ");
-            sb.Append(jo).Append("조");
-        }
-        if (eok > 0)
-        {
-            if (sb.Length > 0) sb.Append(" ");
-            sb.Append(eok).Append("억");
-        }
-        if (man > 0)
-        {
-            if (sb.Length > 0) sb.Append(" ");
-            sb.Append(man).Append("만");
-        }
-        if (rest > 0)
-        {
-            if (sb.Length > 0) sb.Append(" ");
-            sb.Append(rest);
-        }
-
-        return neg ? "-" + sb.ToString() : sb.ToString();
-    }
-
-    private void CheckStorageBlink(long totalStorage)
-    {
-        long maxCap = SaveManager.Instance.Data.blackHole.BlackHoleStorageMax;
-        bool isFull = totalStorage >= maxCap;
-
-        if (isFull)
-            StartStorageBlink();
-        else
-            StopStorageBlink();
+        if (isFull) StartStorageBlink();
+        else StopStorageBlink();
     }
 
     private void StartStorageBlink()
@@ -267,7 +202,7 @@ public class MainUIController : MonoBehaviour
         if (storageText != null)
         {
             storageText.enabled = true;
-            storageText.color = storageOriginalColor; // 원래색 복구
+            storageText.color = storageOriginalColor;
         }
     }
 
@@ -275,6 +210,8 @@ public class MainUIController : MonoBehaviour
     {
         while (true)
         {
+            if (storageText == null) yield break;
+
             storageText.color = Color.red;
             storageText.enabled = true;
             yield return new WaitForSeconds(storageBlinkInterval);

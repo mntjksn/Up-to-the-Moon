@@ -6,27 +6,38 @@ public class SurpriseBoxSpawner : MonoBehaviour
     [SerializeField] private GameObject surpriseBoxPrefab;
 
     [Header("Start Delay")]
-    [SerializeField] private float startDelay = 60f;   // 게임 시작 후 60초
+    [SerializeField] private float startDelay = 60f;
 
     [Header("Random Spawn Time")]
-    [SerializeField] private float minSpawnTime = 15f; // 최소 15초
-    [SerializeField] private float maxSpawnTime = 40f; // 최대 40초
+    [SerializeField] private float minSpawnTime = 15f;
+    [SerializeField] private float maxSpawnTime = 40f;
 
     [Header("Spawn Range")]
     [SerializeField] private float xPadding = 0.5f;
     [SerializeField] private float yOffset = 1.0f;
 
+    private Camera cam;
+
+    private void Awake()
+    {
+        cam = Camera.main;
+    }
+
     private void Start()
     {
+        if (surpriseBoxPrefab == null)
+        {
+            Debug.LogWarning("[SurpriseBoxSpawner] surpriseBoxPrefab is null");
+            return;
+        }
+
         StartCoroutine(SpawnRoutine());
     }
 
     private IEnumerator SpawnRoutine()
     {
-        // 1 시작 딜레이
         yield return new WaitForSeconds(startDelay);
 
-        // 2 무한 반복
         while (true)
         {
             SpawnBox();
@@ -38,9 +49,6 @@ public class SurpriseBoxSpawner : MonoBehaviour
 
     private void SpawnBox()
     {
-        if (surpriseBoxPrefab == null) return;
-
-        Camera cam = Camera.main;
         if (cam == null) return;
 
         Vector3 leftTop = cam.ViewportToWorldPoint(new Vector3(0f, 1f, 0f));
@@ -49,6 +57,10 @@ public class SurpriseBoxSpawner : MonoBehaviour
         float x = Random.Range(leftTop.x + xPadding, rightTop.x - xPadding);
         float y = leftTop.y + yOffset;
 
-        Instantiate(surpriseBoxPrefab, new Vector3(x, y, 0f), Quaternion.identity);
+        Instantiate(
+            surpriseBoxPrefab,
+            new Vector3(x, y, 0f),
+            Quaternion.identity
+        );
     }
 }

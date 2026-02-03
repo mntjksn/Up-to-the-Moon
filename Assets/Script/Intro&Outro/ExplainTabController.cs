@@ -16,15 +16,37 @@ public class ExplainTabController : MonoBehaviour
     [SerializeField] private Button btnUpgrade;
 
     [Header("Button Colors")]
-    [SerializeField] private Color normalColor = new Color(0.8f, 0.8f, 0.8f); // 기본 회색
-    [SerializeField] private Color selectedColor = Color.white;              // 선택된 버튼
+    [SerializeField] private Color normalColor = new Color(0.8f, 0.8f, 0.8f);
+    [SerializeField] private Color selectedColor = Color.white;
+
+    private enum Tab
+    {
+        Default,
+        Area,
+        Resource,
+        Upgrade
+    }
+
+    private GameObject[] panels;
+    private Button[] buttons;
+    private Image[] buttonImages;
 
     private void Awake()
     {
-        btnDefault.onClick.AddListener(() => Show(Tab.Default));
-        btnArea.onClick.AddListener(() => Show(Tab.Area));
-        btnResource.onClick.AddListener(() => Show(Tab.Resource));
-        btnUpgrade.onClick.AddListener(() => Show(Tab.Upgrade));
+        panels = new GameObject[] { panelDefault, panelArea, panelResource, panelUpgrade };
+        buttons = new Button[] { btnDefault, btnArea, btnResource, btnUpgrade };
+        buttonImages = new Image[buttons.Length];
+
+        for (int i = 0; i < buttons.Length; i++)
+        {
+            Button b = buttons[i];
+            if (b == null) continue;
+
+            buttonImages[i] = b.GetComponent<Image>();
+
+            int index = i;
+            b.onClick.AddListener(() => Show((Tab)index));
+        }
     }
 
     private void OnEnable()
@@ -32,52 +54,35 @@ public class ExplainTabController : MonoBehaviour
         Show(Tab.Default);
     }
 
-    private enum Tab { Default, Area, Resource, Upgrade }
-
     private void Show(Tab tab)
     {
-        // 패널 끄기
-        panelDefault.SetActive(false);
-        panelArea.SetActive(false);
-        panelResource.SetActive(false);
-        panelUpgrade.SetActive(false);
+        SetAllPanels(false);
+        SetAllButtons(normalColor);
 
-        // 버튼 색 초기화
-        SetButtonColor(btnDefault, normalColor);
-        SetButtonColor(btnArea, normalColor);
-        SetButtonColor(btnResource, normalColor);
-        SetButtonColor(btnUpgrade, normalColor);
+        int index = (int)tab;
 
-        // 선택 패널 & 버튼
-        switch (tab)
+        if (index >= 0 && index < panels.Length && panels[index] != null)
+            panels[index].SetActive(true);
+
+        if (index >= 0 && index < buttonImages.Length && buttonImages[index] != null)
+            buttonImages[index].color = selectedColor;
+    }
+
+    private void SetAllPanels(bool active)
+    {
+        for (int i = 0; i < panels.Length; i++)
         {
-            case Tab.Default:
-                panelDefault.SetActive(true);
-                SetButtonColor(btnDefault, selectedColor);
-                break;
-
-            case Tab.Area:
-                panelArea.SetActive(true);
-                SetButtonColor(btnArea, selectedColor);
-                break;
-
-            case Tab.Resource:
-                panelResource.SetActive(true);
-                SetButtonColor(btnResource, selectedColor);
-                break;
-
-            case Tab.Upgrade:
-                panelUpgrade.SetActive(true);
-                SetButtonColor(btnUpgrade, selectedColor);
-                break;
+            if (panels[i] != null)
+                panels[i].SetActive(active);
         }
     }
 
-    private void SetButtonColor(Button btn, Color color)
+    private void SetAllButtons(Color color)
     {
-        if (btn == null) return;
-        var img = btn.GetComponent<Image>();
-        if (img != null)
-            img.color = color;
+        for (int i = 0; i < buttonImages.Length; i++)
+        {
+            if (buttonImages[i] != null)
+                buttonImages[i].color = color;
+        }
     }
 }

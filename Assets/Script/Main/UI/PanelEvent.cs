@@ -4,8 +4,8 @@ using UnityEngine;
 
 public class PanelEvent : MonoBehaviour
 {
-    // 제어할 패널 오브젝트
-    public GameObject panel;
+    [Header("Target Panel")]
+    [SerializeField] private GameObject panel;
 
     // 패널 활성화
     public void panel_show()

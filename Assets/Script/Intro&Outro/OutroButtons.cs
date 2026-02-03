@@ -1,9 +1,10 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class OutroButtons : MonoBehaviour
 {
     [Header("Restart Target Scene")]
-    [SerializeField] private string restartScene = "Main"; // 또는 "Intro"
+    [SerializeField] private string restartScene = "Main";
 
     // 여정 끝내기
     public void OnClickEnd()
@@ -18,10 +19,10 @@ public class OutroButtons : MonoBehaviour
     // 다시 도전
     public void OnClickRestart()
     {
-        // 1) 세이브 초기화
-        if (SaveManager.Instance != null)
-            SaveManager.Instance.ResetAllData();
+        SaveManager save = SaveManager.Instance;
+        if (save != null)
+            save.ResetAllData();
 
-        UnityEngine.SceneManagement.SceneManager.LoadScene(restartScene);
+        SceneManager.LoadScene(restartScene);
     }
 }

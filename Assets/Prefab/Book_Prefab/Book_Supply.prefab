@@ -239,4 +239,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   index: 0
   icon: {fileID: 2310795803620140344}
-  BookSupplyPrefab: {fileID: 7745226188285803234, guid: 8ddd4094af9201d4c9a4e060bdddc7bc, type: 3}
+  bookSupplyPrefab: {fileID: 7745226188285803234, guid: 8ddd4094af9201d4c9a4e060bdddc7bc, type: 3}

@@ -2,47 +2,25 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
+// 강화 비용 행 1줄 UI (아이콘 + 필요 개수)
 public class SupplyCostRowUI : MonoBehaviour
 {
+    [Header("UI")]
     [SerializeField] private Image icon;
     [SerializeField] private TextMeshProUGUI countText;
 
+    // 외부에서 호출: 아이콘과 필요 개수 세팅
     public void Set(Sprite sprite, int needCount)
     {
+        // 아이콘 표시
         if (icon != null)
         {
             icon.enabled = (sprite != null);
             icon.sprite = sprite;
         }
 
+        // 필요 개수 텍스트
         if (countText != null)
-            countText.text = $"{FormatKoreanNumber(needCount)}개";
-    }
-
-    private string FormatKoreanNumber(long n)
-    {
-        if (n == 0) return "0";
-        bool neg = n < 0;
-        ulong v = (ulong)(neg ? -n : n);
-
-        const ulong MAN = 10_000UL;
-        const ulong EOK = 100_000_000UL;
-        const ulong JO = 1_000_000_000_000UL;
-        const ulong GYEONG = 10_000_000_000_000_000UL;
-
-        ulong gyeong = v / GYEONG; v %= GYEONG;
-        ulong jo = v / JO; v %= JO;
-        ulong eok = v / EOK; v %= EOK;
-        ulong man = v / MAN; v %= MAN;
-        ulong rest = v;
-
-        System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        if (gyeong > 0) sb.Append(gyeong).Append("경");
-        if (jo > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(jo).Append("조"); }
-        if (eok > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(eok).Append("억"); }
-        if (man > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(man).Append("만"); }
-        if (rest > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(rest); }
-
-        return neg ? "-" + sb.ToString() : sb.ToString();
+            countText.text = $"{NumberFormatter.FormatKorean(needCount)}개";
     }
 }

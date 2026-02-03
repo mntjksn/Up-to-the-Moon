@@ -20,17 +20,23 @@ public class BookSkyPrefab : MonoBehaviour
 
     public void Refresh()
     {
-        var im = BackgroundManager.Instance;
-        if (im == null || !im.IsLoaded) return;
+        BackgroundManager bg = BackgroundManager.Instance;
+        if (bg == null || !bg.IsLoaded) return;
 
-        if (bookIndex < 0 || im.BackgroundItem == null || bookIndex >= im.BackgroundItem.Count)
-            return;
+        var list = bg.BackgroundItem;
+        if (list == null) return;
+        if (bookIndex < 0 || bookIndex >= list.Count) return;
 
-        var item = im.BackgroundItem[bookIndex];
+        BackgroundItem item = list[bookIndex];
         if (item == null) return;
 
-        if (thisimg != null) thisimg.sprite = item.itemimg;
-        if (chname != null) chname.text = item.name;
-        if (sub != null) sub.text = item.sub;
+        if (thisimg != null)
+            thisimg.sprite = item.itemimg;
+
+        if (chname != null)
+            chname.text = item.name;
+
+        if (sub != null)
+            sub.text = item.sub;
     }
 }

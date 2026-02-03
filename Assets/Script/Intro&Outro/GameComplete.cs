@@ -9,7 +9,7 @@ public class GameComplete : MonoBehaviour
     [SerializeField] private Image fadePanel;
     [SerializeField] private float fadeDuration = 0.5f;
 
-    [Header("SceneName")]
+    [Header("Scene Name")]
     [SerializeField] private string sceneName = "Outro";
 
     [Header("Goal")]
@@ -19,28 +19,33 @@ public class GameComplete : MonoBehaviour
 
     private void Start()
     {
-        // 시작할 때 투명 상태로 보장
-        if (fadePanel != null)
-        {
-            Color c = fadePanel.color;
-            c.a = 0f;
-            fadePanel.color = c;
-            fadePanel.gameObject.SetActive(false);
-        }
+        InitFadePanel();
     }
 
     private void Update()
     {
         if (triggered) return;
 
-        float km = SaveManager.Instance != null ? SaveManager.Instance.GetKm() : 0f;
+        SaveManager save = SaveManager.Instance;
+        float km = (save != null) ? save.GetKm() : 0f;
 
-        // float 비교는 >= 로
+        // 목표 거리 도달 시 엔딩 처리
         if (km >= goalKm)
         {
             triggered = true;
             StartCoroutine(FadeAndLoad());
         }
+    }
+
+    // 페이드 패널을 투명 상태로 초기화
+    private void InitFadePanel()
+    {
+        if (fadePanel == null) return;
+
+        Color c = fadePanel.color;
+        c.a = 0f;
+        fadePanel.color = c;
+        fadePanel.gameObject.SetActive(false);
     }
 
     private IEnumerator FadeAndLoad()
@@ -52,7 +57,7 @@ public class GameComplete : MonoBehaviour
             Color c = fadePanel.color;
             float elapsed = 0f;
 
-            // 페이드 중간에 오브젝트가 파괴될 수도 있으니 매 프레임 체크
+            // 지정 시간 동안 알파값 증가
             while (elapsed < fadeDuration)
             {
                 if (fadePanel == null) yield break;
@@ -60,10 +65,12 @@ public class GameComplete : MonoBehaviour
                 elapsed += Time.deltaTime;
                 c.a = Mathf.Clamp01(elapsed / fadeDuration);
                 fadePanel.color = c;
+
                 yield return null;
             }
         }
 
+        // 페이드 완료 후 약간의 텀
         yield return new WaitForSeconds(0.05f);
 
         SceneManager.LoadScene(sceneName);

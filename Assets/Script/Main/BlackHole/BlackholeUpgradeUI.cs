@@ -5,13 +5,13 @@ using UnityEngine.UI;
 public class BlackholeUpgradeUI : MonoBehaviour
 {
     [Header("Income UI")]
-    [SerializeField] private TextMeshProUGUI incomeValueText;   // 노란 글씨: "0.4개/s → 0.5개/s"
-    [SerializeField] private TextMeshProUGUI incomePriceText;   // 버튼 가격 텍스트
+    [SerializeField] private TextMeshProUGUI incomeValueText;
+    [SerializeField] private TextMeshProUGUI incomePriceText;
     [SerializeField] private Button incomeBuyButton;
 
     [Header("Storage UI")]
-    [SerializeField] private TextMeshProUGUI storageValueText;  // 노란 글씨: "1000개 → 5000개"
-    [SerializeField] private TextMeshProUGUI storagePriceText;  // 버튼 가격 텍스트
+    [SerializeField] private TextMeshProUGUI storageValueText;
+    [SerializeField] private TextMeshProUGUI storagePriceText;
     [SerializeField] private Button storageBuyButton;
 
     [Header("Tuning")]
@@ -36,178 +36,164 @@ public class BlackholeUpgradeUI : MonoBehaviour
 
     public void RefreshAll()
     {
-        if (SaveManager.Instance == null) return;
+        SaveManager save = SaveManager.Instance;
+        if (save == null) return;
 
-        RefreshIncome();
-        RefreshStorage();
+        RefreshIncome(save);
+        RefreshStorage(save);
     }
 
-    // =========================
-    // Income (초당 흡수량)
-    // =========================
-    private void RefreshIncome()
+    private void RefreshIncome(SaveManager save)
     {
-        int lv = SaveManager.Instance.GetIncomeLv();
+        int lv = save.GetIncomeLv();
+        bool isMax = lv >= maxIncomeLv;
 
         float cur = GetIncomeByLevel(lv);
         float next = GetIncomeByLevel(Mathf.Min(lv + 1, maxIncomeLv));
 
-        bool isMax = lv >= maxIncomeLv;
-
         if (incomeValueText != null)
-            incomeValueText.text = isMax ? $"{cur:0.##}개/s (MAX)" : $"{cur:0.##}개/s → {next:0.##}개/s";
+            incomeValueText.text = isMax
+                ? string.Format("{0:0.##}개/s (MAX)", cur)
+                : string.Format("{0:0.##}개/s -> {1:0.##}개/s", cur, next);
 
         long price = GetIncomePrice(lv);
-
-        if (incomeBuyButton != null)
-            incomeBuyButton.interactable =
-                !isMax && SaveManager.Instance.GetGold() >= price;
+        long gold = save.GetGold();
 
         if (incomePriceText != null)
-            incomePriceText.text = isMax ? "MAX" : $"{FormatKoreanNumber(price)}원";
+            incomePriceText.text = isMax ? "MAX" : NumberFormatter.FormatKorean(price) + "원";
 
         if (incomeBuyButton != null)
-            incomeBuyButton.interactable = !isMax && SaveManager.Instance.GetGold() >= price;
+            incomeBuyButton.interactable = !isMax && gold >= price;
     }
 
     private void BuyIncome()
     {
+        SaveManager save = SaveManager.Instance;
+        if (save == null) return;
+
         MissionProgressManager.Instance?.Add("blackhole_income_upgrade_count", 1);
 
-        int lv = SaveManager.Instance.GetIncomeLv();
+        int lv = save.GetIncomeLv();
         if (lv >= maxIncomeLv) return;
 
-        sfx.mute = !SoundManager.Instance.IsSfxOn();
-        sfx.Play();
-
         long price = GetIncomePrice(lv);
-        if (SaveManager.Instance.GetGold() < price) return;
+        if (save.GetGold() < price) return;
 
-        // 돈 차감
-        SaveManager.Instance.AddGold(-price);
+        PlaySfx();
 
-        // 레벨 업
-        SaveManager.Instance.AddIncomeLv(1);
+        save.AddGold(-price);
+        save.AddIncomeLv(1);
 
-        float cur = GetIncomeByLevel(lv + 1);
-        SaveManager.Instance.AddIncome(cur);
+        float income = GetIncomeByLevel(lv + 1);
+        save.SetIncome(income);
 
         RefreshAll();
     }
 
-    // 네가 만든 표 스타일(구간별) 그대로 넣기
     public float GetIncomeByLevel(int L)
     {
-        // 0~3 : 0.5씩
-        if (L <= 3)
-            return 0.5f + 0.5f * L;
-
-        // 4~6 : 1씩
-        if (L <= 6)
-            return 2.0f + 1f * (L - 3);
-
-        // 7~11 : 2씩
-        if (L <= 11)
-            return 5.0f + 2f * (L - 6);
-
-        // 12~15 : 2.5씩
-        if (L <= 15)
-            return 15.0f + 2.5f * (L - 11);
-
-        // 16~18 : 5씩
-        if (L <= 18)
-            return 25.0f + 5f * (L - 15);
-
-        // 19 이상 : 10씩
+        if (L <= 3) return 0.5f + 0.5f * L;
+        if (L <= 6) return 2.0f + 1f * (L - 3);
+        if (L <= 11) return 5.0f + 2f * (L - 6);
+        if (L <= 15) return 15.0f + 2.5f * (L - 11);
+        if (L <= 18) return 25.0f + 5f * (L - 15);
         return 40.0f + 10f * (L - 18);
     }
 
-    // 가격은 예시: 단계가 오를수록 점점 비싸게(원하면 바꿔줄게)
     private long GetIncomePrice(int lv)
     {
-        // ex) 1000원 시작, 1.35배씩 증가
         double basePrice = 100;
         double mult = 2.25;
         double raw = basePrice * System.Math.Pow(mult, lv);
 
         if (raw > long.MaxValue) return long.MaxValue;
 
-        long v = (long)raw; return CeilTo(v, 100);
+        long v = (long)raw;
+        return CeilTo(v, 100);
     }
 
-    // =========================
-    // Storage (최대 적재량)
-    // =========================
-    private void RefreshStorage()
+    private void RefreshStorage(SaveManager save)
     {
-        int lv = SaveManager.Instance.GetStorageLv();
+        int lv = save.GetStorageLv();
+        bool isMax = lv >= maxStorageLv;
 
         long cur = GetStorageByLevel(lv);
         long next = GetStorageByLevel(Mathf.Min(lv + 1, maxStorageLv));
 
-        bool isMax = lv >= maxStorageLv;
-
         if (storageValueText != null)
-            storageValueText.text = isMax ? $"{FormatKoreanNumber(cur)}개 (MAX)" : $"{FormatKoreanNumber(cur)}개 → {FormatKoreanNumber(next)}개";
+            storageValueText.text = isMax
+                ? NumberFormatter.FormatKorean(cur) + "개 (MAX)"
+                : NumberFormatter.FormatKorean(cur) + "개 -> " + NumberFormatter.FormatKorean(next) + "개";
 
         long price = GetStoragePrice(lv);
-
-        if (storageBuyButton != null)
-            storageBuyButton.interactable =
-                !isMax && SaveManager.Instance.GetGold() >= price;
+        long gold = save.GetGold();
 
         if (storagePriceText != null)
-            storagePriceText.text = isMax ? "MAX" : $"{FormatKoreanNumber(price)}원";
+            storagePriceText.text = isMax ? "MAX" : NumberFormatter.FormatKorean(price) + "원";
 
         if (storageBuyButton != null)
-            storageBuyButton.interactable = !isMax && SaveManager.Instance.GetGold() >= price;
+            storageBuyButton.interactable = !isMax && gold >= price;
     }
 
     private void BuyStorage()
     {
-        int lv = SaveManager.Instance.GetStorageLv();
+        SaveManager save = SaveManager.Instance;
+        if (save == null) return;
+
+        int lv = save.GetStorageLv();
         if (lv >= maxStorageLv) return;
 
-        sfx.mute = !SoundManager.Instance.IsSfxOn();
-        sfx.Play();
-
         long price = GetStoragePrice(lv);
-        if (SaveManager.Instance.GetGold() < price) return;
+        if (save.GetGold() < price) return;
 
-        SaveManager.Instance.AddGold(-price);
-        SaveManager.Instance.AddStorageLv(1);
+        PlaySfx();
 
-        // storageMax는 실제 데이터에도 반영해줘야 저장고 로직이 동작함
-        SaveManager.Instance.Data.blackHole.BlackHoleStorageMax = GetStorageByLevel(SaveManager.Instance.GetStorageLv());
-        SaveManager.Instance.Save();
+        save.AddGold(-price);
+        save.AddStorageLv(1);
+
+        // SaveManager에 SetStorageMax 같은 함수가 없어서 현재는 직접 반영
+        if (save.Data != null && save.Data.blackHole != null)
+        {
+            long max = GetStorageByLevel(save.GetStorageLv());
+            save.Data.blackHole.BlackHoleStorageMax = max;
+            save.Save();
+        }
 
         RefreshAll();
     }
 
     private long GetStorageByLevel(int lv)
     {
-        // 예시: 1000에서 시작해서 점점 커지게
-        // 원하면 “1000→5000→…” 너가 원하는 표로 바꿔줄게.
         long baseCap = 100;
-        double mult = 2.8; // 25%씩 증가
+        double mult = 2.8;
         double raw = baseCap * System.Math.Pow(mult, lv);
 
         if (raw > long.MaxValue) return long.MaxValue;
 
-        long v = (long)raw; return CeilTo(v, 100);
+        long v = (long)raw;
+        return CeilTo(v, 100);
     }
 
     private long GetStoragePrice(int lv)
     {
-        // ex) 2000원 시작, 1.4배씩 증가
         double basePrice = 500;
         double mult = 5.5;
         double raw = basePrice * System.Math.Pow(mult, lv);
+
         if (raw > long.MaxValue) return long.MaxValue;
 
         long v = (long)raw;
-
         return CeilTo(v, 500);
+    }
+
+    private void PlaySfx()
+    {
+        if (sfx == null) return;
+
+        SoundManager sm = SoundManager.Instance;
+        if (sm != null) sfx.mute = !sm.IsSfxOn();
+
+        sfx.Play();
     }
 
     private long CeilTo(long value, long step)
@@ -215,36 +201,5 @@ public class BlackholeUpgradeUI : MonoBehaviour
         if (step <= 0) return value;
         if (value <= 0) return 0;
         return ((value + step - 1) / step) * step;
-    }
-
-    // =========================
-    // 숫자 포맷
-    // =========================
-    private string FormatKoreanNumber(long n)
-    {
-        if (n == 0) return "0";
-
-        bool neg = n < 0;
-        ulong v = (ulong)(neg ? -n : n);
-
-        const ulong MAN = 10_000UL;
-        const ulong EOK = 100_000_000UL;
-        const ulong JO = 1_000_000_000_000UL;
-        const ulong GYEONG = 10_000_000_000_000_000UL;
-
-        ulong gyeong = v / GYEONG; v %= GYEONG;
-        ulong jo = v / JO; v %= JO;
-        ulong eok = v / EOK; v %= EOK;
-        ulong man = v / MAN; v %= MAN;
-        ulong rest = v;
-
-        System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        if (gyeong > 0) sb.Append(gyeong).Append("경");
-        if (jo > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(jo).Append("조"); }
-        if (eok > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(eok).Append("억"); }
-        if (man > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(man).Append("만"); }
-        if (rest > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(rest); }
-
-        return neg ? "-" + sb.ToString() : sb.ToString();
     }
 }

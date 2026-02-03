@@ -5,18 +5,24 @@ public class BackgroundApply : MonoBehaviour
 {
     [SerializeField] private Image backgroundImage;
 
-    private BackgroundItem currentItem;   // 현재 적용중인 배경
+    // 현재 적용 중인 배경
+    private BackgroundItem currentItem;
 
-    void Update()
+    private void Update()
     {
-        if (SaveManager.Instance == null) return;
-        if (BackgroundManager.Instance == null) return;
-        if (!BackgroundManager.Instance.IsLoaded) return;
+        if (backgroundImage == null) return;
 
-        float km = SaveManager.Instance.GetKm();
+        SaveManager save = SaveManager.Instance;
+        BackgroundManager bgManager = BackgroundManager.Instance;
+
+        if (save == null) return;
+        if (bgManager == null) return;
+        if (!bgManager.IsLoaded) return;
+
+        float km = save.GetKm();
 
         // 현재 km에 맞는 배경 하나만 가져오기
-        var bg = BackgroundManager.Instance.GetCurrentByKm(km);
+        BackgroundItem bg = bgManager.GetByKm(km);
         if (bg == null) return;
 
         // 이미 같은 배경이면 스킵

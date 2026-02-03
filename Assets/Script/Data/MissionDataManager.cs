@@ -28,7 +28,7 @@ public class MissionItem
 [System.Serializable]
 public class MissionItemListWrapper
 {
-    // JSON 최상위 키가 "missions" 라고 했으니 반드시 동일해야 함!
+    // JSON 최상위 키가 "missions" 이므로 필드명도 동일해야 한다
     public List<MissionItem> missions;
 }
 
@@ -36,16 +36,19 @@ public class MissionDataManager : MonoBehaviour
 {
     public static MissionDataManager Instance;
 
+    // 런타임에서 사용하는 미션 리스트
     public List<MissionItem> MissionItem = new List<MissionItem>();
+
+    // 로드 완료 여부
     public bool IsLoaded { get; private set; }
 
     private const string JSON_NAME = "MissionItemData.json";
 
-    private Coroutine loadCo; // 추가
+    private Coroutine loadCo;
 
     private void Awake()
     {
-        if (Instance != null)
+        if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
@@ -54,15 +57,21 @@ public class MissionDataManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        loadCo = StartCoroutine(LoadMissionRoutine()); // 변경
+        StartLoad();
     }
 
-    // 추가: 삭제 후 즉시 초기화 다시 로드
+    // 외부에서 즉시 재로딩 호출용
     public void Reload()
     {
         if (!gameObject.activeInHierarchy) return;
+        StartLoad();
+    }
 
-        if (loadCo != null) StopCoroutine(loadCo);
+    private void StartLoad()
+    {
+        if (loadCo != null)
+            StopCoroutine(loadCo);
+
         loadCo = StartCoroutine(LoadMissionRoutine());
     }
 
@@ -72,38 +81,47 @@ public class MissionDataManager : MonoBehaviour
 
         string targetPath = Path.Combine(Application.persistentDataPath, JSON_NAME);
 
-        // 없으면 StreamingAssets에서 복사
         if (!File.Exists(targetPath))
-        {
-            string streamingPath = Path.Combine(Application.streamingAssetsPath, JSON_NAME);
-
-#if UNITY_ANDROID && !UNITY_EDITOR
-            UnityWebRequest req = UnityWebRequest.Get(streamingPath);
-            yield return req.SendWebRequest();
-
-            if (!req.isNetworkError && !req.isHttpError)
-                File.WriteAllText(targetPath, req.downloadHandler.text);
-#else
-            if (File.Exists(streamingPath))
-                File.Copy(streamingPath, targetPath, true);
-#endif
-        }
+            yield return CopyFromStreamingAssetsIfNeeded(targetPath);
 
         if (!File.Exists(targetPath))
         {
-            MissionItem = new List<MissionItem>();
-            IsLoaded = true;
+            SetEmptyAndFinish();
             yield break;
         }
 
         string json = File.ReadAllText(targetPath);
         if (string.IsNullOrWhiteSpace(json))
         {
-            MissionItem = new List<MissionItem>();
-            IsLoaded = true;
+            SetEmptyAndFinish();
             yield break;
         }
 
+        LoadFromJson(json);
+
+        IsLoaded = true;
+    }
+
+    private IEnumerator CopyFromStreamingAssetsIfNeeded(string targetPath)
+    {
+        string streamingPath = Path.Combine(Application.streamingAssetsPath, JSON_NAME);
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        UnityWebRequest req = UnityWebRequest.Get(streamingPath);
+        yield return req.SendWebRequest();
+
+        if (req.result == UnityWebRequest.Result.Success)
+            File.WriteAllText(targetPath, req.downloadHandler.text);
+#else
+        if (File.Exists(streamingPath))
+            File.Copy(streamingPath, targetPath, true);
+
+        yield break;
+#endif
+    }
+
+    private void LoadFromJson(string json)
+    {
         json = json.TrimStart();
 
         MissionItemListWrapper wrapper = null;
@@ -112,11 +130,13 @@ public class MissionDataManager : MonoBehaviour
         {
             if (json.StartsWith("["))
             {
+                // 배열 JSON인 경우 wrapper 형태로 감싸서 파싱
                 string wrapped = "{\"missions\":" + json + "}";
                 wrapper = JsonUtility.FromJson<MissionItemListWrapper>(wrapped);
             }
             else
             {
+                // wrapper JSON인 경우 그대로 파싱
                 wrapper = JsonUtility.FromJson<MissionItemListWrapper>(json);
             }
         }
@@ -128,18 +148,32 @@ public class MissionDataManager : MonoBehaviour
         MissionItem = (wrapper != null && wrapper.missions != null)
             ? wrapper.missions
             : new List<MissionItem>();
-
-        IsLoaded = true;
-        yield break; // 습관적으로 넣어도 좋음
     }
 
+    private void SetEmptyAndFinish()
+    {
+        MissionItem = new List<MissionItem>();
+        IsLoaded = true;
+    }
+
+    // 현재 미션 상태를 JSON으로 저장
     public void SaveToJson()
     {
         string targetPath = Path.Combine(Application.persistentDataPath, JSON_NAME);
 
-        var wrapper = new MissionItemListWrapper { missions = this.MissionItem };
-        string json = JsonUtility.ToJson(wrapper, true);
+        try
+        {
+            var wrapper = new MissionItemListWrapper
+            {
+                missions = this.MissionItem
+            };
 
-        File.WriteAllText(targetPath, json);
+            string json = JsonUtility.ToJson(wrapper, true);
+            File.WriteAllText(targetPath, json);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError("[MissionDataManager] SaveToJson 실패: " + e.Message);
+        }
     }
 }

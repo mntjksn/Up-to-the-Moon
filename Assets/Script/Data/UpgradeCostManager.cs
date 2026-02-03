@@ -21,6 +21,7 @@ public class UpgradeStep
 [System.Serializable]
 public class UpgradeStepWrapper
 {
+    // JSON 최상위 키가 "UpgradeStep" 이므로 필드명도 동일해야 한다
     public List<UpgradeStep> UpgradeStep;
 }
 
@@ -28,20 +29,20 @@ public class UpgradeCostManager : MonoBehaviour
 {
     public static UpgradeCostManager Instance;
 
-    // 아이템 목록
+    // JSON 키와 동일하게 유지
     public List<UpgradeStep> UpgradeStep = new List<UpgradeStep>();
 
-    // 로드 완료 여부(다른 스크립트에서 접근 타이밍 방지용)
+    // 로드 완료 여부
     public bool IsLoaded { get; private set; }
 
     private const string JSON_NAME = "UpgradeCostData.json";
 
+    // step -> UpgradeStep 빠른 조회용
     private readonly Dictionary<int, UpgradeStep> stepMap = new Dictionary<int, UpgradeStep>();
 
     private void Awake()
     {
-        // 싱글톤 유지
-        if (Instance != null)
+        if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
             return;
@@ -59,46 +60,52 @@ public class UpgradeCostManager : MonoBehaviour
 
         string targetPath = Path.Combine(Application.persistentDataPath, JSON_NAME);
 
-        // JSON이 없으면 StreamingAssets에서 복사
+        if (!File.Exists(targetPath))
+            yield return CopyFromStreamingAssetsIfNeeded(targetPath);
+
         if (!File.Exists(targetPath))
         {
-            string streamingPath = Path.Combine(Application.streamingAssetsPath, JSON_NAME);
-
-#if UNITY_ANDROID && !UNITY_EDITOR
-            UnityWebRequest req = UnityWebRequest.Get(streamingPath);
-            yield return req.SendWebRequest();
-
-            if (!req.isNetworkError && !req.isHttpError)
-                File.WriteAllText(targetPath, req.downloadHandler.text);
-            else
-                Debug.LogError("[UpgradeCostManager] StreamingAssets JSON 로드 실패: " + req.error);
-#else
-            if (File.Exists(streamingPath))
-                File.Copy(streamingPath, targetPath, true);
-            else
-                Debug.LogWarning("[UpgradeCostManager] StreamingAssets에 JSON이 없습니다: " + streamingPath);
-#endif
-        }
-
-        // 파일이 여전히 없으면 빈 리스트
-        if (!File.Exists(targetPath))
-        {
-            UpgradeStep = new List<UpgradeStep>();
-            BuildMap();
-            IsLoaded = true;
+            SetEmptyAndFinish();
             yield break;
         }
 
-        // JSON 읽기
         string json = File.ReadAllText(targetPath);
         if (string.IsNullOrWhiteSpace(json))
         {
-            UpgradeStep = new List<UpgradeStep>();
-            BuildMap();
-            IsLoaded = true;
+            SetEmptyAndFinish();
             yield break;
         }
 
+        LoadFromJson(json);
+        BuildMap();
+
+        IsLoaded = true;
+    }
+
+    private IEnumerator CopyFromStreamingAssetsIfNeeded(string targetPath)
+    {
+        string streamingPath = Path.Combine(Application.streamingAssetsPath, JSON_NAME);
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        UnityWebRequest req = UnityWebRequest.Get(streamingPath);
+        yield return req.SendWebRequest();
+
+        if (req.result == UnityWebRequest.Result.Success)
+            File.WriteAllText(targetPath, req.downloadHandler.text);
+        else
+            Debug.LogError("[UpgradeCostManager] StreamingAssets JSON 로드 실패: " + req.error);
+#else
+        if (File.Exists(streamingPath))
+            File.Copy(streamingPath, targetPath, true);
+        else
+            Debug.LogWarning("[UpgradeCostManager] StreamingAssets에 JSON이 없습니다: " + streamingPath);
+
+        yield break;
+#endif
+    }
+
+    private void LoadFromJson(string json)
+    {
         json = json.TrimStart();
 
         UpgradeStepWrapper wrapper = null;
@@ -107,13 +114,13 @@ public class UpgradeCostManager : MonoBehaviour
         {
             if (json.StartsWith("["))
             {
-                // 배열만 있을 경우 "UpgradeStep"로 감싸서 파싱
+                // 배열 JSON인 경우 wrapper 형태로 감싸서 파싱
                 string wrapped = "{\"UpgradeStep\":" + json + "}";
                 wrapper = JsonUtility.FromJson<UpgradeStepWrapper>(wrapped);
             }
             else
             {
-                // {"UpgradeStep":[...]} 형태면 그대로 파싱
+                // wrapper JSON인 경우 그대로 파싱
                 wrapper = JsonUtility.FromJson<UpgradeStepWrapper>(json);
             }
         }
@@ -126,25 +133,29 @@ public class UpgradeCostManager : MonoBehaviour
         UpgradeStep = (wrapper != null && wrapper.UpgradeStep != null)
             ? wrapper.UpgradeStep
             : new List<UpgradeStep>();
+    }
 
+    private void SetEmptyAndFinish()
+    {
+        UpgradeStep = new List<UpgradeStep>();
         BuildMap();
-
         IsLoaded = true;
-        yield break;
     }
 
     private void BuildMap()
     {
         stepMap.Clear();
 
+        if (UpgradeStep == null) return;
+
         for (int i = 0; i < UpgradeStep.Count; i++)
         {
-            var s = UpgradeStep[i];
+            UpgradeStep s = UpgradeStep[i];
             if (s == null) continue;
 
             if (stepMap.ContainsKey(s.step))
             {
-                Debug.LogWarning($"[UpgradeCostManager] step 중복 발견: {s.step} (뒤 항목 무시)");
+                Debug.LogWarning("[UpgradeCostManager] step 중복 발견: " + s.step + " (뒤 항목 무시)");
                 continue;
             }
 
@@ -152,29 +163,15 @@ public class UpgradeCostManager : MonoBehaviour
         }
     }
 
-    // step으로 비용 리스트 가져오기(권장)
+    // step으로 비용 리스트 가져오기
     public List<Cost> GetCostsByStep(int step)
     {
         if (!IsLoaded) return new List<Cost>();
 
-        if (stepMap.TryGetValue(step, out var s) && s != null)
-            return s.costs ?? new List<Cost>();
+        UpgradeStep s;
+        if (stepMap.TryGetValue(step, out s) && s != null && s.costs != null)
+            return s.costs;
 
         return new List<Cost>();
-    }
-
-    // step 단위로 Step 자체가 필요할 때
-    public bool TryGetStep(int step, out UpgradeStep upgradeStep)
-    {
-        upgradeStep = null;
-        if (!IsLoaded) return false;
-
-        if (stepMap.TryGetValue(step, out var s) && s != null)
-        {
-            upgradeStep = s;
-            return true;
-        }
-
-        return false;
     }
 }

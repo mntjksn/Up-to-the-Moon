@@ -3785,7 +3785,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotPrefab: {fileID: 5115860162800530302, guid: 9d40454e3d982b040b0204fd87470291, type: 3}
   content: {fileID: 1823012306}
-  mainPanel: {fileID: 1339861545}
   currentAmountText: {fileID: 315133924}
   percentText: {fileID: 640253051}
 --- !u!1 &339077449
@@ -9627,6 +9626,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 02ae68970cf03e64882e294596d2b783, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  sr: {fileID: 0}
 --- !u!114 &836676153
 MonoBehaviour:
   m_ObjectHideFlags: 0

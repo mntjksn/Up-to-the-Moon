@@ -8,13 +8,12 @@ public class BookSkyManager : MonoBehaviour
     public static BookSkyManager Instance;
 
     [Header("UI")]
-    [SerializeField] private GameObject slotPrefab;   // BookSkySlot 붙은 프리팹
-    [SerializeField] private Transform content;       // ScrollView Content
+    [SerializeField] private GameObject slotPrefab;
+    [SerializeField] private Transform content;
 
     [Header("Text")]
     [SerializeField] private TextMeshProUGUI titleText;
     [SerializeField] private TextMeshProUGUI subText;
-
 
     [Header("Runtime Cache")]
     public readonly List<BookSkySlot> slots = new List<BookSkySlot>();
@@ -34,12 +33,11 @@ public class BookSkyManager : MonoBehaviour
 
     private void OnEnable()
     {
-        // 패널을 켤 때마다(혹은 씬 시작 때) 안전하게 빌드 시도
         if (buildRoutine == null)
             buildRoutine = StartCoroutine(BuildWhenReady());
 
-        titleText.text = $"지역 사전";
-        subText.text = $"고도에 따라 변화하는 세계의 모습";
+        if (titleText != null) titleText.text = "지역 사전";
+        if (subText != null) subText.text = "고도에 따라 변화하는 세계의 모습";
     }
 
     private void OnDisable()
@@ -53,30 +51,27 @@ public class BookSkyManager : MonoBehaviour
 
     private IEnumerator BuildWhenReady()
     {
-        // 필수 참조 체크
         if (slotPrefab == null || content == null)
         {
-            Debug.LogError("[BackgroundManager] slotPrefab 또는 content가 비어있습니다.");
+            Debug.LogError("[BookSkyManager] slotPrefab 또는 content가 비어있습니다.");
             yield break;
         }
 
-        // ItemManager 생성될 때까지 대기
         while (BackgroundManager.Instance == null)
             yield return null;
 
-        // 로드 완료될 때까지 대기 (너 코드에 IsLoaded 있음)
-        while (!BackgroundManager.Instance.IsLoaded)
+        BackgroundManager bg = BackgroundManager.Instance;
+
+        while (!bg.IsLoaded)
             yield return null;
 
-        // 데이터 유효성 체크
-        if (BackgroundManager.Instance.BackgroundItem == null ||
-            BackgroundManager.Instance.BackgroundItem.Count <= 0)
+        if (bg.BackgroundItem == null || bg.BackgroundItem.Count == 0)
         {
-            Debug.LogError("[BackgroundManager] BookSkySlot 데이터가 비어있습니다.");
+            Debug.LogError("[BookSkyManager] BackgroundItem 데이터가 비어있습니다.");
             yield break;
         }
 
-        BuildSlots(BackgroundManager.Instance.BackgroundItem.Count);
+        BuildSlots(bg.BackgroundItem.Count);
         RefreshAllSlots();
 
         buildRoutine = null;
@@ -84,28 +79,22 @@ public class BookSkyManager : MonoBehaviour
 
     private void BuildSlots(int count)
     {
-        // 1) 기존 캐시/오브젝트 정리
         slots.Clear();
 
-        // Content 아래 자식 전부 삭제 (마지막 1개 더 생김, 재호출 중복 생성 방지)
         for (int i = content.childCount - 1; i >= 0; i--)
-        {
             Destroy(content.GetChild(i).gameObject);
-        }
 
-        // 2) 생성
         for (int i = 0; i < count; i++)
         {
-            var obj = Instantiate(slotPrefab, content);
+            GameObject obj = Instantiate(slotPrefab, content);
 
             if (!obj.TryGetComponent(out BookSkySlot slot))
             {
-                Debug.LogError("[BackgroundManager] slotPrefab에 BookSkySlot 컴포넌트가 없습니다!");
+                Debug.LogError("[BookSkyManager] slotPrefab에 BookSkySlot이 없습니다.");
                 Destroy(obj);
                 continue;
             }
 
-            // 슬롯 초기화
             slot.Setup(i);
             slots.Add(slot);
         }
@@ -119,5 +108,4 @@ public class BookSkyManager : MonoBehaviour
                 slots[i].Refresh();
         }
     }
-
 }

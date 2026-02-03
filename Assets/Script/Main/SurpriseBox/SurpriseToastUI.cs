@@ -5,55 +5,82 @@ using UnityEngine.UI;
 
 public class SurpriseToastUI : MonoBehaviour
 {
-    public Image iconImage;
-    public TextMeshProUGUI messageText;
+    [Header("UI")]
+    [SerializeField] private Image iconImage;
+    [SerializeField] private TextMeshProUGUI messageText;
 
-    // 기존 방식(SurpriseToastManager.Show에서 호출)
+    private Coroutine iconCo;
+
+    // 스프라이트를 직접 넘겨서 세팅
     public void Set(Sprite icon, string msg)
     {
-        if (iconImage != null)
+        if (iconCo != null)
         {
-            iconImage.enabled = (icon != null);
-            iconImage.sprite = icon;
+            StopCoroutine(iconCo);
+            iconCo = null;
         }
 
-        if (messageText != null)
-            messageText.text = msg;
+        ApplyMessage(msg);
+        ApplyIcon(icon);
     }
 
-    // itemNum 방식 (UI가 ItemManager에서 이미지 찾아서 교체)
+    // itemNum으로 아이콘을 나중에 찾아서 세팅
     public void SetByItemNum(int itemNum, string msg)
     {
-        if (messageText != null)
-            messageText.text = msg;
+        if (iconCo != null)
+        {
+            StopCoroutine(iconCo);
+            iconCo = null;
+        }
 
-        StartCoroutine(SetIconRoutine(itemNum));
+        ApplyMessage(msg);
+
+        // 로드 전에는 일단 아이콘 숨김
+        ApplyIcon(null);
+
+        iconCo = StartCoroutine(LoadAndApplyIconRoutine(itemNum));
     }
 
-    private IEnumerator SetIconRoutine(int itemNum)
+    private IEnumerator LoadAndApplyIconRoutine(int itemNum)
     {
-        while (ItemManager.Instance == null) yield return null;
-        while (!ItemManager.Instance.IsLoaded) yield return null;
+        while (ItemManager.Instance == null)
+            yield return null;
 
-        Sprite sprite = null;
+        while (!ItemManager.Instance.IsLoaded)
+            yield return null;
 
+        Sprite sprite = FindSpriteByItemNum(itemNum);
+        ApplyIcon(sprite);
+
+        iconCo = null;
+    }
+
+    private Sprite FindSpriteByItemNum(int itemNum)
+    {
         var list = ItemManager.Instance.SupplyItem;
-        if (list != null)
+        if (list == null) return null;
+
+        for (int i = 0; i < list.Count; i++)
         {
-            for (int i = 0; i < list.Count; i++)
-            {
-                if (list[i].item_num == itemNum)
-                {
-                    sprite = list[i].itemimg;
-                    break;
-                }
-            }
+            var it = list[i];
+            if (it != null && it.item_num == itemNum)
+                return it.itemimg;
         }
 
-        if (iconImage != null)
-        {
-            iconImage.enabled = (sprite != null);
-            iconImage.sprite = sprite;
-        }
+        return null;
+    }
+
+    private void ApplyMessage(string msg)
+    {
+        if (messageText != null)
+            messageText.text = msg;
+    }
+
+    private void ApplyIcon(Sprite sprite)
+    {
+        if (iconImage == null) return;
+
+        iconImage.sprite = sprite;
+        iconImage.enabled = (sprite != null);
     }
 }

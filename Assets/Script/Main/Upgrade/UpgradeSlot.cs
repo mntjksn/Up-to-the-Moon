@@ -11,24 +11,24 @@ public class UpgradeSlot : MonoBehaviour
 
     [Header("UI")]
     [SerializeField] private Image icon;
-    [SerializeField] private TextMeshProUGUI NameText;
-    [SerializeField] private TextMeshProUGUI SubText;
-    [SerializeField] private TextMeshProUGUI SpeedText;
+    [SerializeField] private TextMeshProUGUI nameText;
+    [SerializeField] private TextMeshProUGUI subText;
+    [SerializeField] private TextMeshProUGUI speedText;
 
     [Header("Panel")]
-    [SerializeField] private GameObject Unlock_Main;
-    [SerializeField] private GameObject Unlock_Done;
+    [SerializeField] private GameObject unlockMain;
+    [SerializeField] private GameObject unlockDone;
 
     [Header("MainPanel")]
-    [SerializeField] private TextMeshProUGUI PriceText;
-    [SerializeField] private Button UnlockButton;
+    [SerializeField] private TextMeshProUGUI priceText;
+    [SerializeField] private Button unlockButton;
 
     [Header("UpgradePanel")]
-    [SerializeField] private Button UpgradeButton;
+    [SerializeField] private Button upgradeButton;
 
     [Header("Need Supply UI")]
-    [SerializeField] private Transform needSupplyParent;   // Panel_Need_Supply
-    [SerializeField] private GameObject supplyCostPrefab;  // Panel_Supply_Cost 프리팹
+    [SerializeField] private Transform needSupplyParent;
+    [SerializeField] private GameObject supplyCostPrefab;
 
     [Header("SFX")]
     [SerializeField] private AudioSource sfx;
@@ -38,22 +38,23 @@ public class UpgradeSlot : MonoBehaviour
 
     private void OnEnable()
     {
-        if (SaveManager.Instance != null)
+        var sm = SaveManager.Instance;
+        if (sm != null)
         {
-            SaveManager.Instance.OnResourceChanged += HandleResourceChanged;
-            SaveManager.Instance.OnGoldChanged += HandleGoldChanged;
+            sm.OnResourceChanged += HandleResourceChanged;
+            sm.OnGoldChanged += HandleGoldChanged;
         }
 
-        if (UnlockButton != null)
+        if (unlockButton != null)
         {
-            UnlockButton.onClick.RemoveListener(isUnlock);
-            UnlockButton.onClick.AddListener(isUnlock);
+            unlockButton.onClick.RemoveListener(OnClickUnlock);
+            unlockButton.onClick.AddListener(OnClickUnlock);
         }
 
-        if (UpgradeButton != null)
+        if (upgradeButton != null)
         {
-            UpgradeButton.onClick.RemoveListener(isUpgrade);
-            UpgradeButton.onClick.AddListener(isUpgrade);
+            upgradeButton.onClick.RemoveListener(OnClickUpgrade);
+            upgradeButton.onClick.AddListener(OnClickUpgrade);
         }
 
         if (!initialized) return;
@@ -64,35 +65,31 @@ public class UpgradeSlot : MonoBehaviour
 
     private void OnDisable()
     {
-        if (SaveManager.Instance != null)
+        var sm = SaveManager.Instance;
+        if (sm != null)
         {
-            SaveManager.Instance.OnResourceChanged -= HandleResourceChanged;
-            SaveManager.Instance.OnGoldChanged -= HandleGoldChanged;
+            sm.OnResourceChanged -= HandleResourceChanged;
+            sm.OnGoldChanged -= HandleGoldChanged;
         }
 
-        if (UnlockButton != null)
-            UnlockButton.onClick.RemoveListener(isUnlock);
-
-        if (UpgradeButton != null)
-            UpgradeButton.onClick.RemoveListener(isUpgrade);
+        if (unlockButton != null) unlockButton.onClick.RemoveListener(OnClickUnlock);
+        if (upgradeButton != null) upgradeButton.onClick.RemoveListener(OnClickUpgrade);
 
         if (refreshCo != null) StopCoroutine(refreshCo);
         refreshCo = null;
     }
 
-    // UpgradeManager에서 슬롯 생성할 때 호출
     public void Setup(int idx)
     {
         index = idx;
         initialized = true;
-        Refresh(); // 즉시 1회
+        Refresh();
     }
 
     private IEnumerator RefreshWhenReady()
     {
-        yield return null; // 1프레임 대기
+        yield return null;
 
-        // 매니저 로드 완료까지 대기 (패널 토글 시 타이밍 문제 방지)
         int safety = 200;
         while (safety-- > 0)
         {
@@ -106,6 +103,7 @@ public class UpgradeSlot : MonoBehaviour
             {
                 break;
             }
+
             yield return null;
         }
 
@@ -126,7 +124,6 @@ public class UpgradeSlot : MonoBehaviour
         item = cm.CharacterItem[index];
         ApplyUI(item);
 
-        // 패널 다시 켤 때도 항상 재료 UI 다시 빌드
         if (item != null)
             RefreshNeedSupplyUI(item.item_num + 1);
     }
@@ -135,101 +132,106 @@ public class UpgradeSlot : MonoBehaviour
     {
         if (it == null)
         {
-            if (icon) { icon.sprite = null; icon.enabled = false; }
-            if (NameText) NameText.text = "";
-            if (SubText) SubText.text = "";
-            if (SpeedText) SpeedText.text = "";
-            if (PriceText) PriceText.text = "";
-            if (Unlock_Main) Unlock_Main.SetActive(false);
-            if (Unlock_Done) Unlock_Done.SetActive(false);
-            if (UnlockButton) UnlockButton.interactable = false;
-            if (UpgradeButton) UpgradeButton.interactable = false;
+            if (icon != null) { icon.sprite = null; icon.enabled = false; }
+            if (nameText != null) nameText.text = "";
+            if (subText != null) subText.text = "";
+            if (speedText != null) speedText.text = "";
+            if (priceText != null) priceText.text = "";
+            if (unlockMain != null) unlockMain.SetActive(false);
+            if (unlockDone != null) unlockDone.SetActive(false);
+            if (unlockButton != null) unlockButton.interactable = false;
+            if (upgradeButton != null) upgradeButton.interactable = false;
             return;
         }
 
-        // 패널 토글(원하는 규칙대로)
-        if (Unlock_Main) Unlock_Main.SetActive(it.item_unlock);
-        if (Unlock_Done) Unlock_Done.SetActive(it.item_upgrade);
+        if (unlockMain != null) unlockMain.SetActive(it.item_unlock);
+        if (unlockDone != null) unlockDone.SetActive(it.item_upgrade);
 
-        // 아이콘
         if (icon != null)
         {
             icon.enabled = (it.itemimg != null);
             icon.sprite = it.itemimg;
         }
 
-        // 텍스트
-        if (NameText) NameText.text = it.name;
-        if (SubText) SubText.text = it.sub;
-        if (SpeedText) SpeedText.text = $"{it.item_speed} Km / s";
-        if (PriceText) PriceText.text = $"{FormatKoreanNumber(it.item_price)}원";
+        if (nameText != null) nameText.text = it.name;
+        if (subText != null) subText.text = it.sub;
+        if (speedText != null) speedText.text = $"{it.item_speed} Km / s";
+        if (priceText != null) priceText.text = $"{NumberFormatter.FormatKorean(it.item_price)}원";
 
-        // 버튼 interactable
-        if (UnlockButton != null && SaveManager.Instance != null)
-            UnlockButton.interactable = (it.item_price <= SaveManager.Instance.GetGold());
+        var sm = SaveManager.Instance;
 
-        if (UpgradeButton != null && SaveManager.Instance != null)
+        if (unlockButton != null)
+            unlockButton.interactable = (sm != null) && (sm.GetGold() >= it.item_price);
+
+        if (upgradeButton != null)
         {
             int step = it.item_num + 1;
-            UpgradeButton.interactable = CanAffordCosts(step);
+            upgradeButton.interactable = (sm != null) && CanAffordCosts(step);
         }
     }
 
-    private void isUnlock()
+    private void OnClickUnlock()
     {
         if (item == null) return;
-        if (SaveManager.Instance == null) return;
 
-        sfx.mute = !SoundManager.Instance.IsSfxOn();
-        sfx.Play();
+        var sm = SaveManager.Instance;
+        if (sm == null) return;
 
-        long price = item.item_price;
-        if (SaveManager.Instance.GetGold() < price) return;
+        if (sm.GetGold() < item.item_price) return;
 
-        SaveManager.Instance.AddGold(-price);
+        if (sfx != null)
+        {
+            sfx.mute = !SoundManager.Instance.IsSfxOn();
+            sfx.Play();
+        }
+
+        sm.AddGold(-item.item_price);
 
         item.item_unlock = true;
         CharacterManager.Instance.SaveToJson();
 
-        // 즉시 UI 반영
-        ApplyUI(item);
-        RefreshNeedSupplyUI(item.item_num + 1);
+        Refresh();
     }
 
-    private void isUpgrade()
+    private void OnClickUpgrade()
     {
         if (item == null) return;
-        if (SaveManager.Instance == null) return;
 
-        sfx.mute = !SoundManager.Instance.IsSfxOn();
-        sfx.Play();
+        var sm = SaveManager.Instance;
+        if (sm == null) return;
 
         int step = item.item_num + 1;
-
-        // 재료 충분한지 체크
         if (!CanAffordCosts(step)) return;
 
-        // 재료 차감
+        if (sfx != null)
+        {
+            sfx.mute = !SoundManager.Instance.IsSfxOn();
+            sfx.Play();
+        }
+
         SpendCosts(step);
 
-        // 업그레이드 완료 처리(너 규칙대로)
-        item.item_upgrade = true;          // 업그레이드 완료 표시
-        item.item_unlock = true;           // 필요하면 유지 (이미 unlock일 수도)
+        item.item_upgrade = true;
+        item.item_unlock = true;
+
         CharacterManager.Instance.SaveToJson();
 
         var cm = CharacterManager.Instance;
-        int nextIndex = index + 1;
-        if (cm != null && cm.IsLoaded && nextIndex >= 0 && nextIndex < cm.CharacterItem.Count)
+
+        int nextIndex = index;
+
+        if (cm != null && cm.IsLoaded && cm.CharacterItem != null &&
+            nextIndex >= 0 && nextIndex < cm.CharacterItem.Count)
         {
             var next = cm.CharacterItem[nextIndex];
-            SaveManager.Instance.SetCurrentCharacterId(item.item_num);
-            SaveManager.Instance.SetSpeed(next.item_speed);
+
+            sm.SetCurrentCharacterId(next.item_num); // 다음 캐릭으로 바꾸기
+            sm.SetSpeed(next.item_speed);
         }
         else
         {
-            // 다음이 없으면 현재 item_speed라도 적용
-            SaveManager.Instance.SetCurrentCharacterId(item.item_num);
-            SaveManager.Instance.SetSpeed(item.item_speed);
+            sm.SetCurrentCharacterId(item.item_num);
+            sm.SetSpeed(item.item_speed);
         }
 
         MissionProgressManager.Instance?.Add("character_upgrade_count", 1);
@@ -244,18 +246,18 @@ public class UpgradeSlot : MonoBehaviour
         var im = ItemManager.Instance;
         var ucm = UpgradeCostManager.Instance;
 
-        // 로드 안 됐으면 "삭제하지 말고" 그냥 나감 (사라짐 방지)
         if (im == null || !im.IsLoaded) return;
         if (ucm == null || !ucm.IsLoaded) return;
 
-        // 이제 안전하게 삭제/재생성
         for (int i = needSupplyParent.childCount - 1; i >= 0; i--)
             Destroy(needSupplyParent.GetChild(i).gameObject);
 
         var costs = ucm.GetCostsByStep(step);
 
-        foreach (var c in costs)
+        for (int i = 0; i < costs.Count; i++)
         {
+            var c = costs[i];
+
             var rowGO = Instantiate(supplyCostPrefab, needSupplyParent);
             var rowUI = rowGO.GetComponent<SupplyCostRowUI>();
 
@@ -270,58 +272,42 @@ public class UpgradeSlot : MonoBehaviour
 
     private bool CanAffordCosts(int step)
     {
+        var sm = SaveManager.Instance;
         var ucm = UpgradeCostManager.Instance;
+
+        if (sm == null) return false;
         if (ucm == null || !ucm.IsLoaded) return false;
 
         var costs = ucm.GetCostsByStep(step);
-        if (costs == null || costs.Count == 0) return true; // 비용 없으면 가능
+        if (costs == null || costs.Count == 0) return true;
 
-        foreach (var c in costs)
+        for (int i = 0; i < costs.Count; i++)
         {
-            int have = SaveManager.Instance.GetResource(c.itemId); // 네 함수명으로 맞추기
+            var c = costs[i];
+            int have = sm.GetResource(c.itemId);
             if (have < c.count) return false;
         }
+
         return true;
     }
 
     private void SpendCosts(int step)
     {
+        var sm = SaveManager.Instance;
         var ucm = UpgradeCostManager.Instance;
+
+        if (sm == null) return;
+        if (ucm == null || !ucm.IsLoaded) return;
+
         var costs = ucm.GetCostsByStep(step);
 
-        foreach (var c in costs)
+        for (int i = 0; i < costs.Count; i++)
         {
-            SaveManager.Instance.AddResource(c.itemId, -c.count); // 네 함수명으로 맞추기
+            var c = costs[i];
+            sm.AddResource(c.itemId, -c.count);
         }
     }
 
     private void HandleResourceChanged() => Refresh();
     private void HandleGoldChanged() => Refresh();
-
-    private string FormatKoreanNumber(long n)
-    {
-        if (n == 0) return "0";
-        bool neg = n < 0;
-        ulong v = (ulong)(neg ? -n : n);
-
-        const ulong MAN = 10_000UL;
-        const ulong EOK = 100_000_000UL;
-        const ulong JO = 1_000_000_000_000UL;
-        const ulong GYEONG = 10_000_000_000_000_000UL;
-
-        ulong gyeong = v / GYEONG; v %= GYEONG;
-        ulong jo = v / JO; v %= JO;
-        ulong eok = v / EOK; v %= EOK;
-        ulong man = v / MAN; v %= MAN;
-        ulong rest = v;
-
-        System.Text.StringBuilder sb = new System.Text.StringBuilder();
-        if (gyeong > 0) sb.Append(gyeong).Append("경");
-        if (jo > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(jo).Append("조"); }
-        if (eok > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(eok).Append("억"); }
-        if (man > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(man).Append("만"); }
-        if (rest > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(rest); }
-
-        return neg ? "-" + sb.ToString() : sb.ToString();
-    }
 }

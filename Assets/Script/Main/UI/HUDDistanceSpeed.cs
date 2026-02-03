@@ -3,6 +3,7 @@ using UnityEngine;
 
 public class HUDDistanceSpeed : MonoBehaviour
 {
+    [Header("UI")]
     [SerializeField] private TextMeshProUGUI kmText;
     [SerializeField] private TextMeshProUGUI speedText;
 
@@ -14,38 +15,42 @@ public class HUDDistanceSpeed : MonoBehaviour
 
     private void Start()
     {
-        currentSpeed = baseSpeed * speedMultiplier;
+        // 초기 목표 속도 저장
+        float initSpeed = baseSpeed * speedMultiplier;
+        currentSpeed = initSpeed;
+
+        if (SaveManager.Instance != null)
+            SaveManager.Instance.SetSpeed(initSpeed);
     }
 
     private void Update()
     {
-        if (SaveManager.Instance == null) return;
+        var sm = SaveManager.Instance;
+        if (sm == null) return;
 
-        // 목표 속도
+        // 목표 속도 계산
         float targetSpeed = baseSpeed * speedMultiplier;
-        MissionProgressManager.Instance?.SetValue("player_speed", targetSpeed);
 
-        // 부드럽게 변화
+        // SaveManager에 목표 속도 반영
+        sm.SetSpeed(targetSpeed);
+
+        // 부드럽게 표시용 속도 보간
         currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, Time.deltaTime * 3f);
 
-        // km 누적
-        SaveManager.Instance.AddKm(currentSpeed * Time.deltaTime);
+        // 이동 거리 누적
+        sm.AddKm(currentSpeed * Time.deltaTime);
 
-        // 값 가져오기
-        float km = SaveManager.Instance.GetKm();
+        float km = sm.GetKm();
+
+        // 미션용 reach_value 갱신
+        MissionProgressManager.Instance?.SetValue("player_speed", targetSpeed);
         MissionProgressManager.Instance?.SetValue("distance_km", km);
 
-        // 천 단위 콤마 적용
+        // UI 표시
         if (kmText != null)
-            kmText.text = $"현재 고도 : {km.ToString("N0")} Km";
+            kmText.text = $"현재 고도 : {km:N0} Km";
 
         if (speedText != null)
-            speedText.text = $"현재 속도 : {currentSpeed.ToString("N2")} Km / s";
-    }
-
-    // 업그레이드에서 호출
-    public void SetSpeedMultiplier(float m)
-    {
-        speedMultiplier = Mathf.Max(0f, m);
+            speedText.text = $"현재 속도 : {currentSpeed:N2} Km / s";
     }
 }

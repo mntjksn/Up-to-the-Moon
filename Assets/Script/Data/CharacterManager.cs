@@ -152,11 +152,4 @@ public class CharacterManager : MonoBehaviour
 
         File.WriteAllText(targetPath, json);
     }
-
-    public CharacterItem GetItem(int id)
-    {
-        if (CharacterItem == null) return null;
-        if (id < 0 || id >= CharacterItem.Count) return null;
-        return CharacterItem[id];
-    }
 }

@@ -28,16 +28,17 @@ public class BoostController : MonoBehaviour
 
         if (Input.touchCount > 0)
         {
-            var t = Input.GetTouch(0);
+            Touch t = Input.GetTouch(0);
             if (t.phase == TouchPhase.Began)
                 return IsHitByScreenPoint(t.position);
         }
+
         return false;
     }
 
     private bool IsHitByScreenPoint(Vector3 screenPos)
     {
-        var cam = Camera.main;
+        Camera cam = Camera.main;
         if (cam == null) return false;
 
         Vector2 worldPos = cam.ScreenToWorldPoint(screenPos);
@@ -48,24 +49,24 @@ public class BoostController : MonoBehaviour
 
     private void TryActivateBoost()
     {
-        var sm = SaveManager.Instance;
-        if (sm == null || sm.Data == null || sm.Data.boost == null) return;
+        SaveManager sm = SaveManager.Instance;
+        if (sm == null) return;
 
-        var b = sm.Data.boost;
+        if (!sm.IsBoostUnlocked()) return;
 
-        if (!b.boostUnlock) return;
+        SaveData.Boost b;
+        if (!TryGetBoost(sm, out b)) return;
 
         long now = NowMs();
 
-        // 쿨타임이면 발동 금지
         if (now < b.cooldownEndUnixMs)
         {
             if (debugLog) Debug.Log("[Boost] cooldown");
             return;
         }
 
-        // 이미 부스트 중이면 무시
-        if (now < b.boostEndUnixMs) return;
+        if (now < b.boostEndUnixMs)
+            return;
 
         if (boostCo != null) StopCoroutine(boostCo);
         boostCo = StartCoroutine(BoostRoutine());
@@ -73,73 +74,86 @@ public class BoostController : MonoBehaviour
 
     private IEnumerator BoostRoutine()
     {
-        MissionProgressManager.Instance?.Add("boost_use_count", 1);
+        if (MissionProgressManager.Instance != null)
+            MissionProgressManager.Instance.Add("boost_use_count", 1);
 
-        var sm = SaveManager.Instance;
-        if (sm == null || sm.Data == null || sm.Data.boost == null) yield break;
+        SaveManager sm = SaveManager.Instance;
+        if (sm == null) yield break;
 
-        var b = sm.Data.boost;
+        SaveData.Boost b;
+        if (!TryGetBoost(sm, out b)) yield break;
 
-        float percent = b.boostSpeed;        // 25, 50, ...
-        float duration = Mathf.Clamp(b.boostTime, 0.01f, 45f);
-        float cooldown = b.boostCoolTime;    // 60
+        float percent = sm.GetBoostSpeed();
+        float duration = Mathf.Clamp(sm.GetBoostTime(), 0.01f, 45f);
+        float cooldown = b.boostCoolTime;
 
         long now = NowMs();
 
-        // 종료 절대시간 저장
         b.boostEndUnixMs = now + (long)(duration * 1000f);
         sm.Save();
 
-        // 속도 적용
         baseSpeedBeforeBoost = sm.GetSpeed();
         boostedSpeed = baseSpeedBeforeBoost * (1f + percent / 100f);
         sm.SetSpeed(boostedSpeed);
 
         if (debugLog)
-            Debug.Log($"[Boost] ON {duration}s");
+            Debug.Log("[Boost] ON " + duration + "s");
 
         yield return new WaitForSeconds(duration);
 
-        // 복귀
         float current = sm.GetSpeed();
         if (Mathf.Abs(current - boostedSpeed) < 0.0001f)
             sm.SetSpeed(baseSpeedBeforeBoost);
 
-        // 쿨타임 절대시간 저장
         b.cooldownEndUnixMs = NowMs() + (long)(cooldown * 1000f);
         b.boostEndUnixMs = 0;
         sm.Save();
 
         if (debugLog)
-            Debug.Log($"[Boost] OFF. Cooldown {cooldown}s");
+            Debug.Log("[Boost] OFF. Cooldown " + cooldown + "s");
 
         boostCo = null;
     }
 
-    // ===== UI용 =====
+    private bool TryGetBoost(SaveManager sm, out SaveData.Boost boost)
+    {
+        boost = null;
+
+        if (sm == null) return false;
+        if (sm.Data == null) return false;
+        if (sm.Data.boost == null) return false;
+
+        boost = sm.Data.boost;
+        return true;
+    }
+
+    // UI용
     public float GetBoostRemaining()
     {
-        var sm = SaveManager.Instance;
-        if (sm == null || sm.Data?.boost == null) return 0f;
+        SaveManager sm = SaveManager.Instance;
+        SaveData.Boost b;
+        if (!TryGetBoost(sm, out b)) return 0f;
 
-        long remainMs = sm.Data.boost.boostEndUnixMs - NowMs();
+        long remainMs = b.boostEndUnixMs - NowMs();
         return Mathf.Max(0f, remainMs / 1000f);
     }
 
     public float GetCooldownRemaining()
     {
-        var sm = SaveManager.Instance;
-        if (sm == null || sm.Data?.boost == null) return 0f;
+        SaveManager sm = SaveManager.Instance;
+        SaveData.Boost b;
+        if (!TryGetBoost(sm, out b)) return 0f;
 
-        long remainMs = sm.Data.boost.cooldownEndUnixMs - NowMs();
+        long remainMs = b.cooldownEndUnixMs - NowMs();
         return Mathf.Max(0f, remainMs / 1000f);
     }
 
     public bool IsBoosting()
     {
-        var sm = SaveManager.Instance;
-        if (sm == null || sm.Data?.boost == null) return false;
+        SaveManager sm = SaveManager.Instance;
+        SaveData.Boost b;
+        if (!TryGetBoost(sm, out b)) return false;
 
-        return NowMs() < sm.Data.boost.boostEndUnixMs;
+        return NowMs() < b.boostEndUnixMs;
     }
 }

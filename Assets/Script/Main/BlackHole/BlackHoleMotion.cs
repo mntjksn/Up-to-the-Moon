@@ -3,11 +3,11 @@ using UnityEngine;
 public class BlackHoleMotion : MonoBehaviour
 {
     [Header("Rotate")]
-    [SerializeField] private float rotateSpeed = 180f; // degrees/sec
+    [SerializeField] private float rotateSpeed = 180f;   // 초당 회전 각도
 
     [Header("Pulse (Scale)")]
-    [SerializeField] private float pulseSpeed = 2.2f;  // cycles/sec 느낌
-    [SerializeField] private float pulseAmount = 0.12f; // 0.12면 ±12%
+    [SerializeField] private float pulseSpeed = 2.2f;    // 펄스 속도
+    [SerializeField] private float pulseAmount = 0.12f;  // 스케일 변화량
 
     private Vector3 baseScale;
 
@@ -18,12 +18,13 @@ public class BlackHoleMotion : MonoBehaviour
 
     private void Update()
     {
-        // 1) 회전
+        // 회전
         transform.Rotate(0f, 0f, rotateSpeed * Time.deltaTime);
 
-        // 2) 펄스(사인파)
-        float t = (Mathf.Sin(Time.time * pulseSpeed * Mathf.PI * 2f) + 1f) * 0.5f; // 0~1
-        float scaleMul = Mathf.Lerp(1f - pulseAmount, 1f + pulseAmount, t);
-        transform.localScale = baseScale * scaleMul;
+        // 스케일 펄스
+        float t = (Mathf.Sin(Time.time * pulseSpeed * Mathf.PI * 2f) + 1f) * 0.5f;
+        float scale = Mathf.Lerp(1f - pulseAmount, 1f + pulseAmount, t);
+
+        transform.localScale = baseScale * scale;
     }
 }

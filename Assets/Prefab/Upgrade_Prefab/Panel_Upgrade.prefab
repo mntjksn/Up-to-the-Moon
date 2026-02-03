@@ -1122,14 +1122,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   index: 0
   icon: {fileID: 3856987983701675502}
-  NameText: {fileID: 3549606186958433957}
-  SubText: {fileID: 5404968395679854655}
-  SpeedText: {fileID: 455405228637467314}
-  Unlock_Main: {fileID: 4614028868747589763}
-  Unlock_Done: {fileID: 4832855995163447960}
-  PriceText: {fileID: 6663996695414092309}
-  UnlockButton: {fileID: 7316417511642970603}
-  UpgradeButton: {fileID: 3301859530969448159}
+  nameText: {fileID: 3549606186958433957}
+  subText: {fileID: 5404968395679854655}
+  speedText: {fileID: 455405228637467314}
+  unlockMain: {fileID: 4614028868747589763}
+  unlockDone: {fileID: 4832855995163447960}
+  priceText: {fileID: 3637836056932856932}
+  unlockButton: {fileID: 7316417511642970603}
+  upgradeButton: {fileID: 3301859530969448159}
   needSupplyParent: {fileID: 4002261229886652460}
   supplyCostPrefab: {fileID: 8067487793558529453, guid: c73aff2b83654644aa876ca833bcc748, type: 3}
   sfx: {fileID: 3429114205201899067}
