@@ -30243,6 +30243,8 @@ MonoBehaviour:
   boostCoolPercentText: {fileID: 42549235}
   boostCoolSlider: {fileID: 1014928621}
   boostController: {fileID: 836676153}
+  baseSpeed: 0.01
+  speedMultiplier: 1
 --- !u!1 &2046194531
 GameObject:
   m_ObjectHideFlags: 0
