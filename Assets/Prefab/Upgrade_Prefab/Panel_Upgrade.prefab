@@ -1127,7 +1127,7 @@ MonoBehaviour:
   speedText: {fileID: 455405228637467314}
   unlockMain: {fileID: 4614028868747589763}
   unlockDone: {fileID: 4832855995163447960}
-  priceText: {fileID: 3637836056932856932}
+  priceText: {fileID: 6663996695414092309}
   unlockButton: {fileID: 7316417511642970603}
   upgradeButton: {fileID: 3301859530969448159}
   needSupplyParent: {fileID: 4002261229886652460}
