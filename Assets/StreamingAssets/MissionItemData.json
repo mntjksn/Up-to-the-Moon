@@ -3,7 +3,7 @@
     {
       "id": "GROWTH_EASY_GOLD_5000",
       "title": "골드 모으기",
-      "desc": "5천원 모아보자",
+      "desc": "5천원 모아보자 !!",
 
       "tier": "easy",
       "category": "growth",
@@ -127,16 +127,16 @@
       "rewardClaimed": false
     },
     {
-      "id": "RESOURCE_EASY_COLLECT_1000",
+      "id": "RESOURCE_EASY_COLLECT_500",
       "title": "자원 모으기",
-      "desc": "총 1000개 모아보자 !!",
+      "desc": "총 500개 모아보자 !!",
 
       "tier": "easy",
       "category": "resource",
 
       "goalType": "accumulate",
       "goalKey": "resource_collect_total",
-      "goalTarget": 1000,
+      "goalTarget": 500,
 
       "rewardGold": 5000,
 
@@ -525,16 +525,16 @@
     {
       "id": "PLAY_NORMAL_SURPRISEBOX_50",
       "title": "깜짝 상자 획득",
-      "desc": "50번 획득 해보자 !!",
+      "desc": "250번 획득 해보자 !!",
 
       "tier": "normal",
       "category": "play",
 
       "goalType": "count",
       "goalKey": "surprise_box_open_count",
-      "goalTarget": 50,
+      "goalTarget": 250,
 
-      "rewardGold": 1000000,
+      "rewardGold": 5000000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -642,7 +642,7 @@
       "goalKey": "distance_km",
       "goalTarget": 300000,
 
-      "rewardGold": 100000000,
+      "rewardGold": 500000000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -685,18 +685,18 @@
       "rewardClaimed": false
     },
     {
-      "id": "RESOURCE_HARD_EACH_500",
+      "id": "RESOURCE_HARD_EACH_10000",
       "title": "각 자원 모으기",
-      "desc": "각각 500개 이상 모아보자 !!",
+      "desc": "각각 1만개 이상 모아보자 !!",
 
       "tier": "hard",
       "category": "resource",
 
       "goalType": "multi_reach",
       "goalKey": "each_resource_amount",
-      "goalTarget": 500,
+      "goalTarget": 10000,
 
-      "rewardGold": 50000000,
+      "rewardGold": 1000000000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -714,7 +714,7 @@
       "goalKey": "blackhole_income_upgrade_count",
       "goalTarget": 19,
 
-      "rewardGold": 10000000,
+      "rewardGold": 100000000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -795,16 +795,16 @@
     {
       "id": "PLAY_HARD_SURPRISEBOX_500",
       "title": "깜짝 상자 획득",
-      "desc": "500번 획득 해보자 !!",
+      "desc": "5000번 획득 해보자 !!",
 
       "tier": "hard",
       "category": "play",
 
       "goalType": "count",
       "goalKey": "surprise_box_open_count",
-      "goalTarget": 500,
+      "goalTarget": 5000,
 
-      "rewardGold": 50000000,
+      "rewardGold": 500000000,
 
       "currentValue": 0,
       "isCompleted": false,

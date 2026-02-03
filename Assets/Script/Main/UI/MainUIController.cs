@@ -35,10 +35,7 @@ public class MainUIController : MonoBehaviour
     [Header("Boost Ref (optional)")]
     [SerializeField] private BoostController boostController;
 
-    [Header("Speed")]
-    [SerializeField] private float baseSpeed = 0.01f;
-    [SerializeField] private float speedMultiplier = 1f;
-
+    private float speedMultiplier = 1f;
     private float currentSpeed;
 
     private Coroutine storageBlinkRoutine;
@@ -52,7 +49,7 @@ public class MainUIController : MonoBehaviour
         if (storageText != null)
             storageOriginalColor = storageText.color;
 
-        float initSpeed = baseSpeed * speedMultiplier;
+        float initSpeed = SaveManager.Instance.GetSpeed() * speedMultiplier;
         currentSpeed = initSpeed;
 
         if (SaveManager.Instance != null)
@@ -68,10 +65,7 @@ public class MainUIController : MonoBehaviour
         if (sm == null) return;
 
         // 목표 속도 계산
-        float targetSpeed = baseSpeed * speedMultiplier;
-
-        // SaveManager에 목표 속도 반영
-        sm.SetSpeed(targetSpeed);
+        float targetSpeed = sm.GetSpeed() * speedMultiplier;
 
         // 부드럽게 표시용 속도 보간
         currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, Time.deltaTime * 3f);
