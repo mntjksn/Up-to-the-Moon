@@ -18,6 +18,9 @@ public class BlackholeUpgradeUI : MonoBehaviour
     [SerializeField] private int maxIncomeLv = 50;
     [SerializeField] private int maxStorageLv = 50;
 
+    [Header("SFX")]
+    [SerializeField] private AudioSource sfx;
+
     private void OnEnable()
     {
         if (incomeBuyButton != null) incomeBuyButton.onClick.AddListener(BuyIncome);
@@ -73,6 +76,9 @@ public class BlackholeUpgradeUI : MonoBehaviour
 
         int lv = SaveManager.Instance.GetIncomeLv();
         if (lv >= maxIncomeLv) return;
+
+        sfx.mute = !SoundManager.Instance.IsSfxOn();
+        sfx.Play();
 
         long price = GetIncomePrice(lv);
         if (SaveManager.Instance.GetGold() < price) return;
@@ -161,6 +167,9 @@ public class BlackholeUpgradeUI : MonoBehaviour
     {
         int lv = SaveManager.Instance.GetStorageLv();
         if (lv >= maxStorageLv) return;
+
+        sfx.mute = !SoundManager.Instance.IsSfxOn();
+        sfx.Play();
 
         long price = GetStoragePrice(lv);
         if (SaveManager.Instance.GetGold() < price) return;

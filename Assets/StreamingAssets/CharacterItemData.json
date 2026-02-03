@@ -1,8 +1,8 @@
 {
   "CharacterItem": [
     {
-      "name": "¼Õ¼ö°Ç",
-      "sub": "°¡º±°Ô ¶°¿À¸£´Â ¿©ÇàÀÇ ½ÃÀÛÁ¡",
+      "name": "ì†ìˆ˜ê±´",
+      "sub": "ê°€ë³ê²Œ ë– ì˜¤ë¥´ëŠ” ì—¬í–‰ì˜ ì‹œì‘ì ",
       "item_num": 0,
       "item_price": 0,
       "item_speed": 0.009999999776482582,
@@ -11,8 +11,8 @@
       "spritePath": "Character/0"
     },
     {
-      "name": "Ç³¼± 1°³",
-      "sub": "ÀÛÀº Ç³¼±ÀÌ ¸¸µé¾î³½ Ã¹ ºñÇà",
+      "name": "í’ì„  1ê°œ",
+      "sub": "ì‘ì€ í’ì„ ì´ ë§Œë“¤ì–´ë‚¸ ì²« ë¹„í–‰",
       "item_num": 1,
       "item_price": 500,
       "item_speed": 0.05000000074505806,
@@ -21,8 +21,8 @@
       "spritePath": "Character/1"
     },
     {
-      "name": "Ç³¼± 2°³",
-      "sub": "Ç³¼± µÎ °³·Î ´õ ³ô¾ÆÁø ºñÇà",
+      "name": "í’ì„  2ê°œ",
+      "sub": "í’ì„  ë‘ ê°œë¡œ ë” ë†’ì•„ì§„ ë¹„í–‰",
       "item_num": 2,
       "item_price": 2000,
       "item_speed": 0.15000000596046449,
@@ -31,8 +31,8 @@
       "spritePath": "Character/2"
     },
     {
-      "name": "Ç³¼± 3°³",
-      "sub": "¾ÈÁ¤ÀûÀÎ ºñÇàÀ» À§ÇÑ ¼¼ °³ÀÇ Ç³¼±",
+      "name": "í’ì„  3ê°œ",
+      "sub": "ì•ˆì •ì ì¸ ë¹„í–‰ì„ ìœ„í•œ ì„¸ ê°œì˜ í’ì„ ",
       "item_num": 3,
       "item_price": 10000,
       "item_speed": 0.30000001192092898,
@@ -41,8 +41,8 @@
       "spritePath": "Character/3"
     },
     {
-      "name": "¿ì»ê",
-      "sub": "¹Ù¶÷À» Å¸°í ÀÌµ¿ÇÏ´Â Áñ°Å¿ò",
+      "name": "ìš°ì‚°",
+      "sub": "ë°”ëŒì„ íƒ€ê³  ì´ë™í•˜ëŠ” ì¦ê±°ì›€",
       "item_num": 4,
       "item_price": 50000,
       "item_speed": 1.25,
@@ -51,8 +51,8 @@
       "spritePath": "Character/4"
     },
     {
-      "name": "»õ",
-      "sub": "ÀÚÀ¯·Ó°Ô ÇÏ´ÃÀ» ³ª´Â »õÀÇ °¨°¢",
+      "name": "ìƒˆ",
+      "sub": "ììœ ë¡­ê²Œ í•˜ëŠ˜ì„ ë‚˜ëŠ” ìƒˆì˜ ê°ê°",
       "item_num": 5,
       "item_price": 200000,
       "item_speed": 2.5,
@@ -61,8 +61,8 @@
       "spritePath": "Character/5"
     },
     {
-      "name": "±¸¸§",
-      "sub": "±¸¸§ À§¸¦ °È´Â µíÇÑ ºÎÀ¯°¨",
+      "name": "êµ¬ë¦„",
+      "sub": "êµ¬ë¦„ ìœ„ë¥¼ ê±·ëŠ” ë“¯í•œ ë¶€ìœ ê°",
       "item_num": 6,
       "item_price": 500000,
       "item_speed": 5.0,
@@ -71,8 +71,8 @@
       "spritePath": "Character/6"
     },
     {
-      "name": "´ë³ª¹« Çï¸®ÄßÅÍ",
-      "sub": "¸¸È­ ¼Ó¿¡¼­ º¸´ø ºñÇà ÀåÄ¡",
+      "name": "ëŒ€ë‚˜ë¬´ í—¬ë¦¬ì½¥í„°",
+      "sub": "ë§Œí™” ì†ì—ì„œ ë³´ë˜ ë¹„í–‰ ì¥ì¹˜",
       "item_num": 7,
       "item_price": 1000000,
       "item_speed": 10.0,
@@ -81,8 +81,8 @@
       "spritePath": "Character/7"
     },
     {
-      "name": "¿­±â±¸",
-      "sub": "ÃµÃµÈ÷ ¶°¿À¸£´Â °Å´ëÇÑ ¿­±â±¸",
+      "name": "ì—´ê¸°êµ¬",
+      "sub": "ì²œì²œíˆ ë– ì˜¤ë¥´ëŠ” ê±°ëŒ€í•œ ì—´ê¸°êµ¬",
       "item_num": 8,
       "item_price": 5000000,
       "item_speed": 30.0,
@@ -91,8 +91,8 @@
       "spritePath": "Character/8"
     },
     {
-      "name": "°æºñÇà±â",
-      "sub": "º»°İÀûÀÎ ºñÇàÀÇ ¼¼°è ÁøÀÔ",
+      "name": "ê²½ë¹„í–‰ê¸°",
+      "sub": "ë³¸ê²©ì ì¸ ë¹„í–‰ì˜ ì„¸ê³„ ì§„ì…",
       "item_num": 9,
       "item_price": 10000000,
       "item_speed": 50.0,
@@ -101,50 +101,50 @@
       "spritePath": "Character/9"
     },
     {
-      "name": "Á¦Æ®±â",
-      "sub": "ÃÊ°í¼ÓÀ¸·Î °¡¸£´Â ÇÏ´Ã",
+      "name": "ì œíŠ¸ê¸°",
+      "sub": "ì´ˆê³ ì†ìœ¼ë¡œ ê°€ë¥´ëŠ” í•˜ëŠ˜",
       "item_num": 10,
-      "item_price": 30000000,
+      "item_price": 50000000,
       "item_speed": 75.0,
       "item_unlock": false,
       "item_upgrade": false,
       "spritePath": "Character/10"
     },
     {
-      "name": "·ÎÄÏ",
-      "sub": "¿ìÁÖ¸¦ ÇâÇÑ ºñÇàÀÇ ½ÃÀÛ",
+      "name": "ë¡œì¼“",
+      "sub": "ìš°ì£¼ë¥¼ í–¥í•œ ë¹„í–‰ì˜ ì‹œì‘",
       "item_num": 11,
-      "item_price": 50000000,
+      "item_price": 100000000,
       "item_speed": 100.0,
       "item_unlock": false,
       "item_upgrade": false,
       "spritePath": "Character/11"
     },
     {
-      "name": "³¯°³",
-      "sub": "ÇÏ´ÃÀ» Áö¹èÇÏ´Â °­·ÂÇÑ ³¯°³",
+      "name": "ë‚ ê°œ",
+      "sub": "í•˜ëŠ˜ì„ ì§€ë°°í•˜ëŠ” ê°•ë ¥í•œ ë‚ ê°œ",
       "item_num": 12,
-      "item_price": 100000000,
+      "item_price": 500000000,
       "item_speed": 150.0,
       "item_unlock": false,
       "item_upgrade": false,
       "spritePath": "Character/12"
     },
     {
-      "name": "¾ÆÀÌ¾ğ¸Ç",
-      "sub": "È÷¾î·Î°¡ µÈ µíÇÑ ºñÇà°¨",
+      "name": "ì•„ì´ì–¸ë§¨",
+      "sub": "íˆì–´ë¡œê°€ ëœ ë“¯í•œ ë¹„í–‰ê°",
       "item_num": 13,
-      "item_price": 500000000,
+      "item_price": 2000000000,
       "item_speed": 200.0,
       "item_unlock": false,
       "item_upgrade": false,
       "spritePath": "Character/13"
     },
     {
-      "name": "½´ÆÛ¸Ç",
-      "sub": "ÃÖ°­ÀÇ ºñÇà ´É·Â ÇØ¹æ",
+      "name": "ìŠˆí¼ë§¨",
+      "sub": "ìµœê°•ì˜ ë¹„í–‰ ëŠ¥ë ¥ í•´ë°©",
       "item_num": 14,
-      "item_price": 1000000000,
+      "item_price": 5000000000,
       "item_speed": 300.0,
       "item_unlock": false,
       "item_upgrade": false,

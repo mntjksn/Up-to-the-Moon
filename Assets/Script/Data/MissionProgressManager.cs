@@ -43,20 +43,26 @@ public class MissionProgressManager : MonoBehaviour
 
         bool changedAny = false;
 
+        string inKey = goalKey?.Trim();
+
         foreach (var m in list)
         {
             if (m.rewardClaimed) continue;
-            if (m.goalKey != goalKey) continue;
+
+            // 매칭이 아니면 continue (매칭이면 아래로 진행)
+            if (!string.Equals(m.goalKey?.Trim(), inKey, System.StringComparison.Ordinal))
+                continue;
 
             if (m.goalType == "accumulate" || m.goalType == "count")
             {
                 double before = m.currentValue;
-                m.currentValue = Math.Max(0, m.currentValue + delta);
+
+                m.currentValue = System.Math.Max(0, m.currentValue + delta);
 
                 if (!m.isCompleted && m.currentValue >= m.goalTarget)
                     m.isCompleted = true;
 
-                if (Math.Abs(m.currentValue - before) > 0.000001 || m.isCompleted)
+                if (System.Math.Abs(m.currentValue - before) > 0.000001 || m.isCompleted)
                     changedAny = true;
             }
         }

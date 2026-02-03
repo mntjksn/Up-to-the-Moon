@@ -146,6 +146,33 @@ public class SaveManager : MonoBehaviour
         }
     }
 
+    public void ResetAllData()
+    {
+        string[] resetFiles =
+        {
+        "save.json",
+        "CharacterItemData.json",
+        "MissionItemData.json"
+    };
+
+        foreach (string file in resetFiles)
+        {
+            string path = Path.Combine(Application.persistentDataPath, file);
+
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+
+        // save.json은 즉시 다시 생성
+        NewGame();
+
+        // 여기 핵심: 삭제된 파일 기준으로 다시 로드해서 “즉시 초기화”
+        CharacterManager.Instance?.Reload();
+        MissionDataManager.Instance?.Reload(); // (다음에 네 코드 받으면 똑같이 만들어줄게)
+
+        Debug.Log("[ResetAllData] Done");
+    }
+
     // ===== 편의 함수들 =====
 
     public long GetGold() => Data.player.gold;
@@ -157,6 +184,26 @@ public class SaveManager : MonoBehaviour
         Save();
         OnGoldChanged?.Invoke();
         MissionProgressManager.Instance?.SetValue("gold", GetGold());
+    }
+
+    public long GetStorageUsed()
+    {
+        if (Data == null || Data.resources == null) return 0;
+        long total = 0;
+        for (int i = 0; i < Data.resources.Length; i++)
+            total += Data.resources[i];
+        return total;
+    }
+
+    public long GetStorageMax()
+    {
+        if (Data == null || Data.blackHole == null) return 0;
+        return Data.blackHole.BlackHoleStorageMax;
+    }
+
+    public bool IsStorageFull()
+    {
+        return GetStorageUsed() >= GetStorageMax();
     }
 
     public float GetKm() => Data.player.km;

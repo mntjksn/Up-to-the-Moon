@@ -16,8 +16,33 @@ public class SupplySlot : MonoBehaviour
 
     private void OnEnable()
     {
+        // 이벤트 구독 (자원량 바뀌면 즉시 Refresh)
+        if (SaveManager.Instance != null)
+            SaveManager.Instance.OnResourceChanged += OnResourceChanged;
+
         // Instantiate 직후(Setup 전) 방어
         if (!initialized) return;
+
+        Refresh();
+    }
+
+    private void OnDisable()
+    {
+        // 이벤트 해제
+        if (SaveManager.Instance != null)
+            SaveManager.Instance.OnResourceChanged -= OnResourceChanged;
+    }
+
+    private void OnResourceChanged()
+    {
+        // Setup 아직 안됐으면 패스
+        if (!initialized) return;
+
+        // 아이템매니저 로드가 아직이면 패스
+        var im = ItemManager.Instance;
+        if (im == null || !im.IsLoaded) return;
+
+        // 즉시 갱신
         Refresh();
     }
 
@@ -74,12 +99,10 @@ public class SupplySlot : MonoBehaviour
                 return;
             }
 
-            // name 비어도 안전
-            string safeName = string.IsNullOrWhiteSpace(it.name)
-                ? $"Item {index}"
-                : it.name;
+            int owned = (SaveManager.Instance != null)
+                ? SaveManager.Instance.GetResource(it.item_num)
+                : 0;
 
-            int owned = SaveManager.Instance.GetResource(it.item_num);
             countText.text = $"{FormatKoreanNumber(owned)}개";
         }
     }
@@ -88,14 +111,13 @@ public class SupplySlot : MonoBehaviour
     {
         if (n == 0) return "0";
 
-        // 음수도 안전하게
         bool neg = n < 0;
         ulong v = (ulong)(neg ? -n : n);
 
-        const ulong MAN = 10_000UL;                 // 10^4
-        const ulong EOK = 100_000_000UL;            // 10^8
-        const ulong JO = 1_000_000_000_000UL;      // 10^12
-        const ulong GYEONG = 10_000_000_000_000_000UL; // 10^16
+        const ulong MAN = 10_000UL;
+        const ulong EOK = 100_000_000UL;
+        const ulong JO = 1_000_000_000_000UL;
+        const ulong GYEONG = 10_000_000_000_000_000UL;
 
         ulong gyeong = v / GYEONG; v %= GYEONG;
         ulong jo = v / JO; v %= JO;
@@ -106,26 +128,10 @@ public class SupplySlot : MonoBehaviour
         System.Text.StringBuilder sb = new System.Text.StringBuilder();
 
         if (gyeong > 0) sb.Append(gyeong).Append("경");
-        if (jo > 0)
-        {
-            if (sb.Length > 0) sb.Append(" ");
-            sb.Append(jo).Append("조");
-        }
-        if (eok > 0)
-        {
-            if (sb.Length > 0) sb.Append(" ");
-            sb.Append(eok).Append("억");
-        }
-        if (man > 0)
-        {
-            if (sb.Length > 0) sb.Append(" ");
-            sb.Append(man).Append("만");
-        }
-        if (rest > 0)
-        {
-            if (sb.Length > 0) sb.Append(" ");
-            sb.Append(rest);
-        }
+        if (jo > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(jo).Append("조"); }
+        if (eok > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(eok).Append("억"); }
+        if (man > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(man).Append("만"); }
+        if (rest > 0) { if (sb.Length > 0) sb.Append(" "); sb.Append(rest); }
 
         return neg ? "-" + sb.ToString() : sb.ToString();
     }

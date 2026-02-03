@@ -41,6 +41,8 @@ public class MissionDataManager : MonoBehaviour
 
     private const string JSON_NAME = "MissionItemData.json";
 
+    private Coroutine loadCo; // 추가
+
     private void Awake()
     {
         if (Instance != null)
@@ -52,7 +54,16 @@ public class MissionDataManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        StartCoroutine(LoadMissionRoutine());
+        loadCo = StartCoroutine(LoadMissionRoutine()); // 변경
+    }
+
+    // 추가: 삭제 후 즉시 초기화 다시 로드
+    public void Reload()
+    {
+        if (!gameObject.activeInHierarchy) return;
+
+        if (loadCo != null) StopCoroutine(loadCo);
+        loadCo = StartCoroutine(LoadMissionRoutine());
     }
 
     private IEnumerator LoadMissionRoutine()
@@ -101,13 +112,11 @@ public class MissionDataManager : MonoBehaviour
         {
             if (json.StartsWith("["))
             {
-                // 배열만 있으면 missions로 감싸서 파싱
                 string wrapped = "{\"missions\":" + json + "}";
                 wrapper = JsonUtility.FromJson<MissionItemListWrapper>(wrapped);
             }
             else
             {
-                // {"missions":[...]} 형태면 그대로
                 wrapper = JsonUtility.FromJson<MissionItemListWrapper>(json);
             }
         }
@@ -121,6 +130,7 @@ public class MissionDataManager : MonoBehaviour
             : new List<MissionItem>();
 
         IsLoaded = true;
+        yield break; // 습관적으로 넣어도 좋음
     }
 
     public void SaveToJson()

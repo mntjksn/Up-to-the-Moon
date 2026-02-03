@@ -30,6 +30,9 @@ public class UpgradeSlot : MonoBehaviour
     [SerializeField] private Transform needSupplyParent;   // Panel_Need_Supply
     [SerializeField] private GameObject supplyCostPrefab;  // Panel_Supply_Cost ÇÁ¸®ÆÕ
 
+    [Header("SFX")]
+    [SerializeField] private AudioSource sfx;
+
     private CharacterItem item;
     private Coroutine refreshCo;
 
@@ -177,6 +180,9 @@ public class UpgradeSlot : MonoBehaviour
         if (item == null) return;
         if (SaveManager.Instance == null) return;
 
+        sfx.mute = !SoundManager.Instance.IsSfxOn();
+        sfx.Play();
+
         long price = item.item_price;
         if (SaveManager.Instance.GetGold() < price) return;
 
@@ -194,6 +200,9 @@ public class UpgradeSlot : MonoBehaviour
     {
         if (item == null) return;
         if (SaveManager.Instance == null) return;
+
+        sfx.mute = !SoundManager.Instance.IsSfxOn();
+        sfx.Play();
 
         int step = item.item_num + 1;
 

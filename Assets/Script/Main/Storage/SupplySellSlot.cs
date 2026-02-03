@@ -18,6 +18,9 @@ public class SupplySellSlot : MonoBehaviour
     [SerializeField] private Button button;
     [SerializeField] private TextMeshProUGUI buttonText;
 
+    [Header("SFX")]
+    [SerializeField] private AudioSource sfx;
+
     private SupplyItem item;
 
     private void OnEnable()
@@ -130,6 +133,9 @@ public class SupplySellSlot : MonoBehaviour
     private void OnClickSellAll()
     {
         if (item == null || SaveManager.Instance == null) return;
+
+        sfx.mute = !SoundManager.Instance.IsSfxOn();
+        sfx.Play();
 
         int owned = SaveManager.Instance.GetResource(item.item_num);
         if (owned <= 0) return;

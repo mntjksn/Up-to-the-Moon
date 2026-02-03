@@ -26,6 +26,9 @@ public class BoostManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI speedDescText;  // +25% 증가 같은 설명
     [SerializeField] private TextMeshProUGUI timeDescText;
 
+    [Header("SFX")]
+    [SerializeField] private AudioSource sfx;
+
     private void OnEnable()
     {
         // 해금 버튼
@@ -130,6 +133,9 @@ public class BoostManager : MonoBehaviour
         var b = SaveManager.Instance.Data.boost;
         if (b == null) return;
 
+        sfx.mute = !SoundManager.Instance.IsSfxOn();
+        sfx.Play();
+
         if (b.boostUnlock) return;
         if (SaveManager.Instance.GetGold() < unlockPrice) return;
 
@@ -151,6 +157,9 @@ public class BoostManager : MonoBehaviour
         var b = sm.Data.boost;
         if (b == null || !b.boostUnlock) return;
 
+        sfx.mute = !SoundManager.Instance.IsSfxOn();
+        sfx.Play();
+
         if (sm.GetGold() < b.boostSpeedPrice) return;
 
         sm.AddGold(-b.boostSpeedPrice);
@@ -171,6 +180,9 @@ public class BoostManager : MonoBehaviour
 
         var b = sm.Data.boost;
         if (b == null || !b.boostUnlock) return;
+
+        sfx.mute = !SoundManager.Instance.IsSfxOn();
+        sfx.Play();
 
         float maxTime = 30f;
         if (b.boostTime >= maxTime)

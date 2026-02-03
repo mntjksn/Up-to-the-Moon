@@ -35,17 +35,15 @@ public class CharacterManager : MonoBehaviour
 {
     public static CharacterManager Instance;
 
-    // 아이템 목록
     public List<CharacterItem> CharacterItem = new List<CharacterItem>();
-
-    // 로드 완료 여부(다른 스크립트에서 접근 타이밍 방지용)
     public bool IsLoaded { get; private set; }
 
     private const string JSON_NAME = "CharacterItemData.json";
 
+    private Coroutine loadCo; // 추가: 코루틴 핸들
+
     private void Awake()
     {
-        // 싱글톤 유지
         if (Instance != null)
         {
             Destroy(gameObject);
@@ -55,7 +53,17 @@ public class CharacterManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        StartCoroutine(LoadCharacterItemRoutine());
+        // 변경: 코루틴 핸들 저장
+        loadCo = StartCoroutine(LoadCharacterItemRoutine());
+    }
+
+    // 추가: 외부에서 “즉시 재로딩” 호출용
+    public void Reload()
+    {
+        if (!gameObject.activeInHierarchy) return;
+
+        if (loadCo != null) StopCoroutine(loadCo);
+        loadCo = StartCoroutine(LoadCharacterItemRoutine());
     }
 
     private IEnumerator LoadCharacterItemRoutine()
@@ -100,20 +108,17 @@ public class CharacterManager : MonoBehaviour
 
         json = json.TrimStart();
 
-        // 배열 JSON / wrapper JSON 모두 대응
         CharacterItemListWrapper wrapper = null;
 
         try
         {
             if (json.StartsWith("["))
             {
-                // 배열만 있을 경우 "CharacterItem"로 감싸서 파싱
                 string wrapped = "{\"CharacterItem\":" + json + "}";
                 wrapper = JsonUtility.FromJson<CharacterItemListWrapper>(wrapped);
             }
             else
             {
-                // {"CharacterItem":[...]} 형태면 그대로 파싱
                 wrapper = JsonUtility.FromJson<CharacterItemListWrapper>(json);
             }
         }
@@ -129,8 +134,7 @@ public class CharacterManager : MonoBehaviour
         // 리소스 로드(1회)
         for (int i = 0; i < CharacterItem.Count; i++)
         {
-            CharacterItem item = CharacterItem[i];
-
+            var item = CharacterItem[i];
             if (!string.IsNullOrEmpty(item.spritePath))
                 item.itemimg = Resources.Load<Sprite>(item.spritePath);
         }

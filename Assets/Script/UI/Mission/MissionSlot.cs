@@ -10,6 +10,9 @@ public class MissionSlot : MonoBehaviour
     [SerializeField] private TextMeshProUGUI rewardText;
     [SerializeField] private Button rewardButton;
 
+    [Header("SFX")]
+    [SerializeField] private AudioSource sfx;
+
     private MissionItem bound;
 
     public void Bind(MissionItem mission)
@@ -47,6 +50,9 @@ public class MissionSlot : MonoBehaviour
         if (bound == null) return;
         if (bound.rewardClaimed) return;
         if (!bound.isCompleted) return;
+
+        sfx.mute = !SoundManager.Instance.IsSfxOn();
+        sfx.Play();
 
         // 1) °ñµå Áö±Þ
         if (SaveManager.Instance != null)
