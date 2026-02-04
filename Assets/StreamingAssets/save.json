@@ -19,7 +19,8 @@
     "boostSpeedPrice": 1000,
     "boostTimePrice": 500,
     "boostEndUnixMs": 0,
-    "cooldownEndUnixMs": 0
+    "cooldownEndUnixMs": 0,
+    "baseSpeedBeforeBoost": 0.0
   },
   "resources": [
     0,

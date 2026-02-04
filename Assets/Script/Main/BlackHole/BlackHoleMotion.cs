@@ -10,21 +10,28 @@ public class BlackHoleMotion : MonoBehaviour
     [SerializeField] private float pulseAmount = 0.12f;  // 스케일 변화량
 
     private Vector3 baseScale;
+    private Transform cachedTr;
+
+    private const float TAU = 6.28318530718f; // 2 * PI
 
     private void Awake()
     {
-        baseScale = transform.localScale;
+        cachedTr = transform;
+        baseScale = cachedTr.localScale;
     }
 
     private void Update()
     {
+        // 혹시 비활성 상태면 스킵(안전)
+        if (!cachedTr.gameObject.activeInHierarchy) return;
+
         // 회전
-        transform.Rotate(0f, 0f, rotateSpeed * Time.deltaTime);
+        cachedTr.Rotate(0f, 0f, rotateSpeed * Time.deltaTime);
 
         // 스케일 펄스
-        float t = (Mathf.Sin(Time.time * pulseSpeed * Mathf.PI * 2f) + 1f) * 0.5f;
+        float t = (Mathf.Sin(Time.time * pulseSpeed * TAU) + 1f) * 0.5f;
         float scale = Mathf.Lerp(1f - pulseAmount, 1f + pulseAmount, t);
 
-        transform.localScale = baseScale * scale;
+        cachedTr.localScale = baseScale * scale;
     }
 }

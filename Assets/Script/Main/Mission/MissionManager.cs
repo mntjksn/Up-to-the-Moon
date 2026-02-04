@@ -26,6 +26,10 @@ public class MissionManager : MonoBehaviour
     [SerializeField] private GameObject panelTypePrefab;
     [SerializeField] private GameObject panelListPrefab;
 
+    [Header("Perf")]
+    [SerializeField] private int refreshPerFrame = 20;   // 한번에 너무 많이 Refresh하지 않게 분산(선택)
+    [SerializeField] private bool debounceRefresh = true;
+
     private Coroutine buildRoutine;
     private bool built = false;
 
@@ -39,6 +43,15 @@ public class MissionManager : MonoBehaviour
         { "upgrade", "강화" },
         { "play", "플레이" },
     };
+
+    // 티어별 슬롯 캐시 (GetComponentsInChildren 제거)
+    private readonly List<MissionSlot> easySlots = new List<MissionSlot>(128);
+    private readonly List<MissionSlot> normalSlots = new List<MissionSlot>(128);
+    private readonly List<MissionSlot> hardSlots = new List<MissionSlot>(128);
+
+    // 이벤트 폭주 디바운스
+    private bool refreshQueued = false;
+    private Coroutine refreshCo;
 
     private void Awake()
     {
@@ -68,6 +81,14 @@ public class MissionManager : MonoBehaviour
             StopCoroutine(buildRoutine);
             buildRoutine = null;
         }
+
+        if (refreshCo != null)
+        {
+            StopCoroutine(refreshCo);
+            refreshCo = null;
+        }
+
+        refreshQueued = false;
     }
 
     private void HookButtons()
@@ -75,25 +96,21 @@ public class MissionManager : MonoBehaviour
         if (btnEasy != null)
         {
             btnEasy.onClick.RemoveAllListeners();
-            btnEasy.onClick.AddListener(OnClickEasy);
+            btnEasy.onClick.AddListener(() => ShowTier("easy"));
         }
 
         if (btnNormal != null)
         {
             btnNormal.onClick.RemoveAllListeners();
-            btnNormal.onClick.AddListener(OnClickNormal);
+            btnNormal.onClick.AddListener(() => ShowTier("normal"));
         }
 
         if (btnHard != null)
         {
             btnHard.onClick.RemoveAllListeners();
-            btnHard.onClick.AddListener(OnClickHard);
+            btnHard.onClick.AddListener(() => ShowTier("hard"));
         }
     }
-
-    private void OnClickEasy() { ShowTier("easy"); }
-    private void OnClickNormal() { ShowTier("normal"); }
-    private void OnClickHard() { ShowTier("hard"); }
 
     private IEnumerator BuildWhenReady()
     {
@@ -114,9 +131,14 @@ public class MissionManager : MonoBehaviour
             yield break;
         }
 
-        BuildTier("easy", contentEasy, missions);
-        BuildTier("normal", contentNormal, missions);
-        BuildTier("hard", contentHard, missions);
+        // 캐시 비우기
+        easySlots.Clear();
+        normalSlots.Clear();
+        hardSlots.Clear();
+
+        BuildTier("easy", contentEasy, missions, easySlots);
+        BuildTier("normal", contentNormal, missions, normalSlots);
+        BuildTier("hard", contentHard, missions, hardSlots);
 
         built = true;
 
@@ -126,9 +148,10 @@ public class MissionManager : MonoBehaviour
         buildRoutine = null;
     }
 
-    private void BuildTier(string tier, Transform tierContent, List<MissionItem> allMissions)
+    private void BuildTier(string tier, Transform tierContent, List<MissionItem> allMissions, List<MissionSlot> slotCache)
     {
         ClearChildren(tierContent);
+        slotCache.Clear();
 
         for (int c = 0; c < categoryOrder.Length; c++)
         {
@@ -158,8 +181,7 @@ public class MissionManager : MonoBehaviour
                 continue;
             }
 
-            string title;
-            if (!categoryTitle.TryGetValue(cat, out title)) title = cat;
+            if (!categoryTitle.TryGetValue(cat, out string title)) title = cat;
             typeUI.SetTitle(title);
 
             for (int i = 0; i < allMissions.Count; i++)
@@ -181,6 +203,7 @@ public class MissionManager : MonoBehaviour
                 }
 
                 slot.Bind(m);
+                slotCache.Add(slot); // 캐시
             }
         }
     }
@@ -220,7 +243,6 @@ public class MissionManager : MonoBehaviour
             if (m.tier != tier) continue;
 
             hasAny = true;
-
             if (!m.rewardClaimed)
                 return false;
         }
@@ -233,28 +255,93 @@ public class MissionManager : MonoBehaviour
         if (scrollEasy != null) scrollEasy.SetActive(tier == "easy");
         if (scrollNormal != null) scrollNormal.SetActive(tier == "normal");
         if (scrollHard != null) scrollHard.SetActive(tier == "hard");
+
+        // 티어 바꿀 때도 UI 최신화(한 번)
+        OnExternalMissionStateChanged();
     }
 
     public void OnExternalMissionStateChanged()
     {
         if (!built) return;
 
-        RefreshTierLockState();
-        RefreshVisibleSlots();
+        if (!debounceRefresh)
+        {
+            RefreshTierLockState();
+            StartRefreshVisibleSlots();
+            return;
+        }
+
+        // 이벤트 폭주 방지: 한 프레임에 한 번만
+        if (refreshQueued) return;
+        refreshQueued = true;
+
+        if (refreshCo == null)
+            refreshCo = StartCoroutine(DeferredRefresh());
     }
 
-    private void RefreshVisibleSlots()
+    private IEnumerator DeferredRefresh()
     {
-        Transform root = null;
+        // 다음 프레임까지 모아서 1번만 처리
+        yield return null;
 
-        if (scrollEasy != null && scrollEasy.activeSelf) root = contentEasy;
-        else if (scrollNormal != null && scrollNormal.activeSelf) root = contentNormal;
-        else if (scrollHard != null && scrollHard.activeSelf) root = contentHard;
+        refreshQueued = false;
 
-        if (root == null) return;
+        RefreshTierLockState();
+        StartRefreshVisibleSlots();
 
-        MissionSlot[] slots = root.GetComponentsInChildren<MissionSlot>(true);
-        for (int i = 0; i < slots.Length; i++)
-            slots[i].Refresh();
+        refreshCo = null;
+    }
+
+    private void StartRefreshVisibleSlots()
+    {
+        // 분산 Refresh 코루틴 사용(선택)
+        if (refreshPerFrame <= 0)
+        {
+            RefreshVisibleSlotsImmediate();
+            return;
+        }
+
+        StartCoroutine(RefreshVisibleSlotsAsync());
+    }
+
+    private void RefreshVisibleSlotsImmediate()
+    {
+        var list = GetVisibleSlotList();
+        if (list == null) return;
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            if (list[i] != null)
+                list[i].Refresh();
+        }
+    }
+
+    private IEnumerator RefreshVisibleSlotsAsync()
+    {
+        var list = GetVisibleSlotList();
+        if (list == null) yield break;
+
+        int done = 0;
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            var s = list[i];
+            if (s != null) s.Refresh();
+
+            done++;
+            if (done >= refreshPerFrame)
+            {
+                done = 0;
+                yield return null;
+            }
+        }
+    }
+
+    private List<MissionSlot> GetVisibleSlotList()
+    {
+        if (scrollEasy != null && scrollEasy.activeSelf) return easySlots;
+        if (scrollNormal != null && scrollNormal.activeSelf) return normalSlots;
+        if (scrollHard != null && scrollHard.activeSelf) return hardSlots;
+        return null;
     }
 }

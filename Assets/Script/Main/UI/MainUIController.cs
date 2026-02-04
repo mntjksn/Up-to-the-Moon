@@ -35,8 +35,14 @@ public class MainUIController : MonoBehaviour
     [Header("Boost Ref (optional)")]
     [SerializeField] private BoostController boostController;
 
-    private float speedMultiplier = 1f;
-    private float currentSpeed;
+    [Header("Move/Save")]
+    [SerializeField] private float speedMultiplier = 1f;     // 실제 이동에 곱할 배율(원하면 유지)
+    [SerializeField] private float uiLerpSpeed = 3f;         // 표시 보간 속도
+    [SerializeField] private float kmSaveInterval = 0.25f;   // km를 SaveManager에 반영하는 주기(초)
+
+    private float currentSpeed;      // UI 표시용(부드럽게 보간)
+    private float kmAcc;             // 저장 전까지 임시로 누적할 km
+    private float kmSaveTimer;
 
     private Coroutine storageBlinkRoutine;
     private Color storageOriginalColor;
@@ -49,14 +55,15 @@ public class MainUIController : MonoBehaviour
         if (storageText != null)
             storageOriginalColor = storageText.color;
 
-        float initSpeed = SaveManager.Instance.GetSpeed() * speedMultiplier;
-        currentSpeed = initSpeed;
+        var sm = SaveManager.Instance;
+        if (sm == null) return;
 
-        if (SaveManager.Instance != null)
-            SaveManager.Instance.SetSpeed(initSpeed);
+        // SetSpeed를 Start에서 다시 덮어쓰지 말고, 현재 저장값을 기준으로 표시만 맞춘다
+        currentSpeed = sm.GetSpeed() * speedMultiplier;
 
         RefreshStaticUIOnce();
-        RefreshDynamicUI(currentSpeed); // 시작 프레임에 바로 표시
+        RefreshDynamicUI(currentSpeed);
+        RefreshBoostUI();
     }
 
     private void Update()
@@ -64,17 +71,38 @@ public class MainUIController : MonoBehaviour
         var sm = SaveManager.Instance;
         if (sm == null) return;
 
-        // 목표 속도 계산
+        // 목표 속도(저장된 speed * 배율)
         float targetSpeed = sm.GetSpeed() * speedMultiplier;
 
-        // 부드럽게 표시용 속도 보간
-        currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, Time.deltaTime * 3f);
+        // UI 표시만 부드럽게
+        currentSpeed = Mathf.Lerp(currentSpeed, targetSpeed, Time.deltaTime * uiLerpSpeed);
 
-        // 이동 거리 누적
-        sm.AddKm(currentSpeed * Time.deltaTime);
+        // 이동거리 누적은 로컬에서 하고, SaveManager에는 주기적으로만 반영
+        float deltaKm = currentSpeed * Time.deltaTime;
+        kmAcc += deltaKm;
 
-        RefreshDynamicUI(currentSpeed);   // currentSpeed 전달
+        kmSaveTimer += Time.deltaTime;
+        if (kmSaveTimer >= kmSaveInterval)
+        {
+            sm.AddKm(kmAcc);   // 여기서만 Save() 발생
+            kmAcc = 0f;
+            kmSaveTimer = 0f;
+        }
+
+        RefreshDynamicUI(currentSpeed);
         RefreshBoostUI();
+    }
+
+    private void OnDisable()
+    {
+        // 패널 꺼질 때 남은 누적 km 반영(손실 방지)
+        var sm = SaveManager.Instance;
+        if (sm != null && kmAcc != 0f)
+        {
+            sm.AddKm(kmAcc);
+            kmAcc = 0f;
+            kmSaveTimer = 0f;
+        }
     }
 
     private void RefreshStaticUIOnce()
@@ -91,7 +119,7 @@ public class MainUIController : MonoBehaviour
         var sm = SaveManager.Instance;
         if (sm == null || sm.Data == null) return;
 
-        float km = sm.GetKm();
+        float km = sm.GetKm(); // 저장된 km 기준 (주기적으로 업데이트됨)
         long gold = sm.GetGold();
 
         long totalStorage = sm.GetStorageUsed();
@@ -112,7 +140,6 @@ public class MainUIController : MonoBehaviour
         if (kmText != null)
             kmText.text = $"현재 고도 : {km:N2} Km";
 
-        // 여기! 실제 speed 값 대신 보간된 displaySpeed로 표시
         if (speedText != null)
             speedText.text = $"현재 속도 : {displaySpeed:N2} Km / s";
 
@@ -124,6 +151,7 @@ public class MainUIController : MonoBehaviour
 
         CheckStorageBlink(totalStorage, maxStorage);
     }
+
     private void RefreshBoostUI()
     {
         var sm = SaveManager.Instance;
@@ -171,11 +199,7 @@ public class MainUIController : MonoBehaviour
         else
         {
             float totalCool = Mathf.Max(0.01f, b.boostCoolTime);
-            float remainCool = 0f;
-
-            if (boostController != null)
-                remainCool = boostController.GetCooldownRemaining();
-
+            float remainCool = (boostController != null) ? boostController.GetCooldownRemaining() : 0f;
             remainCool = Mathf.Clamp(remainCool, 0f, totalCool);
 
             if (boostCoolSlider != null)

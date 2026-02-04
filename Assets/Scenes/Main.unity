@@ -2656,6 +2656,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   SupplyItem: []
+  spriteLoadsPerFrame: 6
 --- !u!4 &212961371
 Transform:
   m_ObjectHideFlags: 0
@@ -2683,6 +2684,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 09fc33a50ea739b4d81d4da850b7e392, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  saveDebounceSec: 0.5
+  prettyPrint: 0
+  saveOnPauseQuit: 1
 --- !u!114 &212961373
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2696,6 +2700,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   BackgroundItem: []
+  spriteLoadsPerFrame: 4
+  yieldDuringFileIO: 0
 --- !u!114 &212961374
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2709,6 +2715,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   CharacterItem: []
+  spriteLoadsPerFrame: 4
+  saveDebounceSec: 0.5
+  prettyPrint: 0
 --- !u!114 &212961375
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2735,6 +2744,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   MissionItem: []
+  saveDebounceSec: 0.5
+  prettyPrint: 0
 --- !u!114 &212961377
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2748,6 +2759,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   saveInterval: 0.5
+  autoTickInterval: 0.25
 --- !u!114 &212961378
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2810,6 +2822,7 @@ MonoBehaviour:
   fadeDuration: 2.5
   sceneName: Outro
   goalKm: 388440
+  checkInterval: 0.2
 --- !u!114 &212961382
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2825,6 +2838,8 @@ MonoBehaviour:
   prefab: {fileID: -2997526545284240974, guid: 20dd1dab6b5b15645a8945f71d47d3bc, type: 3}
   prewarmCount: 50
   canExpand: 1
+  poolRoot: {fileID: 0}
+  spawnRoot: {fileID: 0}
 --- !u!1 &226299018
 GameObject:
   m_ObjectHideFlags: 0
@@ -3172,6 +3187,8 @@ MonoBehaviour:
   content: {fileID: 339077450}
   titleText: {fileID: 1503758923}
   subText: {fileID: 1659193599}
+  buildPerFrame: 6
+  refreshPerFrame: 12
 --- !u!1 &250375820
 GameObject:
   m_ObjectHideFlags: 0
@@ -3803,6 +3820,7 @@ MonoBehaviour:
   content: {fileID: 1823012306}
   currentAmountText: {fileID: 315133924}
   percentText: {fileID: 640253051}
+  topUiDebounceSec: 0.15
 --- !u!1 &339077449
 GameObject:
   m_ObjectHideFlags: 0
@@ -6712,6 +6730,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   backgroundImage: {fileID: 578989970}
+  checkInterval: 0.25
 --- !u!1 &585667963
 GameObject:
   m_ObjectHideFlags: 0
@@ -7443,6 +7462,8 @@ MonoBehaviour:
   contentHard: {fileID: 2049411179}
   panelTypePrefab: {fileID: 5936296397948419297, guid: 8509510376b9fce4da40cdd35bf3d06a, type: 3}
   panelListPrefab: {fileID: 245361173304597584, guid: a0fcee1a2506fcd47975e365cfc60f39, type: 3}
+  refreshPerFrame: 20
+  debounceRefresh: 1
 --- !u!1 &636100499
 GameObject:
   m_ObjectHideFlags: 0
@@ -9726,6 +9747,7 @@ MonoBehaviour:
   spawnVfx: 1
   maxVfxPerFrame: 8
   vfxEveryNDrops: 1
+  maxDropsPerFrame: 32
 --- !u!114 &836676152
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -20524,6 +20546,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   backgroundImage: {fileID: 1293037105}
+  checkInterval: 0.25
 --- !u!1 &1303139612
 GameObject:
   m_ObjectHideFlags: 0
@@ -21606,7 +21629,6 @@ GameObject:
   - component: {fileID: 1359840842}
   - component: {fileID: 1359840841}
   - component: {fileID: 1359840840}
-  - component: {fileID: 1359840839}
   - component: {fileID: 1359840843}
   m_Layer: 5
   m_Name: Scroll View_Upgrade
@@ -21636,18 +21658,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -162.5}
   m_SizeDelta: {x: -50, y: -725}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1359840839
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1359840836}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c7757b6d8a535b8489cc415503d97661, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &1359840840
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -23203,6 +23213,7 @@ MonoBehaviour:
   swingAngle: 10
   swingSpeed: 0.25
   offsetByRandomPhase: 1
+  recacheBasePosOnEnable: 1
 --- !u!4 &1475231134
 Transform:
   m_ObjectHideFlags: 0
@@ -23468,6 +23479,8 @@ MonoBehaviour:
   content: {fileID: 289749701}
   titleText: {fileID: 1503758923}
   subText: {fileID: 1659193599}
+  buildPerFrame: 6
+  refreshPerFrame: 12
 --- !u!1 &1503758921
 GameObject:
   m_ObjectHideFlags: 0
@@ -30718,6 +30731,9 @@ MonoBehaviour:
   boostCoolPercentText: {fileID: 42549235}
   boostCoolSlider: {fileID: 1014928621}
   boostController: {fileID: 836676153}
+  speedMultiplier: 1
+  uiLerpSpeed: 3
+  kmSaveInterval: 0.25
 --- !u!1 &2046194531
 GameObject:
   m_ObjectHideFlags: 0

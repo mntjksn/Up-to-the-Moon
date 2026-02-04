@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class SurpriseBox : MonoBehaviour
@@ -69,29 +68,33 @@ public class SurpriseBox : MonoBehaviour
         var sm = SaveManager.Instance;
         if (sm == null || sm.Data == null || sm.Data.resources == null) return;
 
+        // SFX
         if (sfx != null)
         {
-            sfx.mute = !SoundManager.Instance.IsSfxOn();
+            var snd = SoundManager.Instance;
+            if (snd != null) sfx.mute = !snd.IsSfxOn();
             sfx.Play();
         }
 
-        List<int> available = new List<int>();
-        for (int i = 0; i < sm.Data.resources.Length; i++)
+        int id = PickRandomOwnedResourceId(sm.Data.resources);
+        if (id < 0)
         {
-            if (sm.Data.resources[i] > 0)
-                available.Add(i);
+            SurpriseToastManager.Instance?.Show(null, "보유 중인 광물이 없습니다!");
+            return;
         }
-
-        if (available.Count == 0) return;
-
-        int id = available[Random.Range(0, available.Count)];
 
         long maxStorage = sm.GetStorageMax();
         if (maxStorage <= 0) return;
 
-        float percent = Random.Range(minPercent, maxPercent);
-        long rawAmount = (long)Mathf.RoundToInt(maxStorage * percent);
-        int amount = (int)Mathf.Clamp(rawAmount, 1, int.MaxValue);
+        // percent 안전 보정
+        float minP = Mathf.Clamp01(minPercent);
+        float maxP = Mathf.Clamp01(maxPercent);
+        if (maxP < minP) { float tmp = minP; minP = maxP; maxP = tmp; }
+
+        float percent = Random.Range(minP, maxP);
+        long rawAmount = (long)(maxStorage * percent + 0.5f); // round
+        long amountL = (long)Mathf.Clamp(rawAmount, 1, int.MaxValue);
+        int amount = (int)amountL;
 
         long used = sm.GetStorageUsed();
         long remain = maxStorage - used;
@@ -103,7 +106,6 @@ public class SurpriseBox : MonoBehaviour
         }
 
         int give = amount;
-
         if ((long)amount > remain)
         {
             if (!clampToRemain)
@@ -118,18 +120,36 @@ public class SurpriseBox : MonoBehaviour
         sm.AddResource(id, give);
         MissionProgressManager.Instance?.Add("surprise_box_open_count", 1);
 
+        // 토스트 1회만
         string msg = "+ " + NumberFormatter.FormatKorean(give) + "개!";
         SurpriseToastManager.Instance?.ShowByItemNum(id, msg);
 
-        // (선택) 원래 amount보다 줄었으면 안내 토스트 추가로 띄우고 싶으면
-         if (give < amount)
-            SurpriseToastManager.Instance?.ShowByItemNum(id, msg);
+        // 줄어서 지급된 경우 다른 문구를 원하면 이렇게
+        // if (give < amount)
+        //     SurpriseToastManager.Instance?.ShowByItemNum(id, "공간 부족으로 일부만 지급!");
     }
 
-    private float EaseInQuad(float x)
+    // 리스트 할당 없이 "보유 중인 id 중 랜덤 1개" 뽑기
+    // Reservoir Sampling 방식: O(n), 추가 메모리 0
+    private int PickRandomOwnedResourceId(int[] resources)
     {
-        return x * x;
+        int chosen = -1;
+        int seen = 0;
+
+        for (int i = 0; i < resources.Length; i++)
+        {
+            if (resources[i] <= 0) continue;
+
+            seen++;
+            // 1/seen 확률로 현재 i로 교체
+            if (Random.Range(0, seen) == 0)
+                chosen = i;
+        }
+
+        return chosen;
     }
+
+    private float EaseInQuad(float x) => x * x;
 
     private float EaseOutBack(float x)
     {

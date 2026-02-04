@@ -39,6 +39,12 @@ public class BackgroundManager : MonoBehaviour
 
     private const string JSON_NAME = "BackgroundItemData.json";
 
+    [Header("Optimization")]
+    [SerializeField] private int spriteLoadsPerFrame = 4; // 프레임당 스프라이트 로드 개수(0이면 전부 한 프레임)
+    [SerializeField] private bool yieldDuringFileIO = false; // true면 파일 IO 전후 한 프레임씩 양보(프리즈 완화용)
+
+    private Coroutine loadCo;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -50,27 +56,38 @@ public class BackgroundManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        StartCoroutine(LoadBackgroundItemRoutine());
+        // 중복 로드 방지
+        if (loadCo == null)
+            loadCo = StartCoroutine(LoadBackgroundItemRoutine());
     }
 
     // km 기준으로 현재 적용될 배경 1개를 반환
     // 전제: zoneMinKm 오름차순 정렬
+    // (최적화) 이진탐색 O(log n)
     public BackgroundItem GetByKm(float km)
     {
         if (BackgroundItem == null || BackgroundItem.Count == 0)
             return null;
 
-        BackgroundItem current = BackgroundItem[0];
+        long kmL = (long)km;
 
-        for (int i = 0; i < BackgroundItem.Count; i++)
+        int lo = 0;
+        int hi = BackgroundItem.Count - 1;
+
+        // kmL 이하인 값 중 가장 큰 zoneMinKm의 인덱스 찾기
+        while (lo <= hi)
         {
-            if (km >= BackgroundItem[i].zoneMinKm)
-                current = BackgroundItem[i];
+            int mid = (lo + hi) >> 1;
+            long midVal = BackgroundItem[mid].zoneMinKm;
+
+            if (midVal <= kmL)
+                lo = mid + 1;
             else
-                break;
+                hi = mid - 1;
         }
 
-        return current;
+        int idx = Mathf.Clamp(hi, 0, BackgroundItem.Count - 1);
+        return BackgroundItem[idx];
     }
 
     private IEnumerator LoadBackgroundItemRoutine()
@@ -85,21 +102,39 @@ public class BackgroundManager : MonoBehaviour
         if (!File.Exists(targetPath))
         {
             SetEmptyAndFinish();
+            loadCo = null;
             yield break;
         }
 
-        string json = File.ReadAllText(targetPath);
+        if (yieldDuringFileIO) yield return null;
+
+        string json = null;
+        try
+        {
+            json = File.ReadAllText(targetPath);
+        }
+        catch
+        {
+            json = null;
+        }
+
+        if (yieldDuringFileIO) yield return null;
+
         if (string.IsNullOrWhiteSpace(json))
         {
             SetEmptyAndFinish();
+            loadCo = null;
             yield break;
         }
 
         LoadFromJson(json);
         SortByZoneMinKm();
-        LoadSpritesOnce();
+
+        // (최적화) Resources.Load를 분산 처리
+        yield return LoadSpritesSpread();
 
         IsLoaded = true;
+        loadCo = null;
     }
 
     private IEnumerator CopyFromStreamingAssetsIfNeeded(string targetPath)
@@ -111,10 +146,22 @@ public class BackgroundManager : MonoBehaviour
         yield return req.SendWebRequest();
 
         if (req.result == UnityWebRequest.Result.Success)
-            File.WriteAllText(targetPath, req.downloadHandler.text);
+        {
+            try
+            {
+                File.WriteAllText(targetPath, req.downloadHandler.text);
+            }
+            catch { }
+        }
 #else
         if (File.Exists(streamingPath))
-            File.Copy(streamingPath, targetPath, true);
+        {
+            try
+            {
+                File.Copy(streamingPath, targetPath, true);
+            }
+            catch { }
+        }
 
         yield break;
 #endif
@@ -156,18 +203,30 @@ public class BackgroundManager : MonoBehaviour
         BackgroundItem.Sort((a, b) => a.zoneMinKm.CompareTo(b.zoneMinKm));
     }
 
-    private void LoadSpritesOnce()
+    private IEnumerator LoadSpritesSpread()
     {
-        if (BackgroundItem == null) return;
+        if (BackgroundItem == null) yield break;
+
+        int loadedThisFrame = 0;
 
         for (int i = 0; i < BackgroundItem.Count; i++)
         {
-            BackgroundItem item = BackgroundItem[i];
-
+            var item = BackgroundItem[i];
             if (item == null) continue;
+            if (item.itemimg != null) continue; // 이미 로드됨
             if (string.IsNullOrEmpty(item.spritePath)) continue;
 
             item.itemimg = Resources.Load<Sprite>(item.spritePath);
+
+            if (spriteLoadsPerFrame > 0)
+            {
+                loadedThisFrame++;
+                if (loadedThisFrame >= spriteLoadsPerFrame)
+                {
+                    loadedThisFrame = 0;
+                    yield return null; // 프레임 양보
+                }
+            }
         }
     }
 

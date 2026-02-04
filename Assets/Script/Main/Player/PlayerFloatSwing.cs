@@ -14,11 +14,17 @@ public class PlayerFloatSwing : MonoBehaviour
     [Header("Phase")]
     [SerializeField] private bool offsetByRandomPhase = true;
 
+    [Header("Base Position")]
+    [SerializeField] private bool recacheBasePosOnEnable = true; // 원하면 기존처럼, 아니면 스냅 방지
+
     private Vector3 basePos;
     private float phaseA;
     private float phaseB;
 
     private Coroutine bindCo;
+    private Transform tr;
+
+    private const float TWO_PI = Mathf.PI * 2f;
 
     private readonly Vector4[] table =
     {
@@ -41,16 +47,22 @@ public class PlayerFloatSwing : MonoBehaviour
 
     private void Awake()
     {
+        tr = transform;
+
         if (offsetByRandomPhase)
         {
             phaseA = Random.Range(0f, 100f);
             phaseB = Random.Range(0f, 100f);
         }
+
+        // recacheBasePosOnEnable=false면 최초 1회만 기준점 잡음
+        basePos = tr.position;
     }
 
     private void OnEnable()
     {
-        basePos = transform.position;
+        if (recacheBasePosOnEnable)
+            basePos = tr.position;
 
         if (bindCo != null) StopCoroutine(bindCo);
         bindCo = StartCoroutine(BindRoutine());
@@ -86,7 +98,7 @@ public class PlayerFloatSwing : MonoBehaviour
 
     private void ApplyByCharacter(int id)
     {
-        if (id < 0 || id >= table.Length) return;
+        if ((uint)id >= (uint)table.Length) return;
 
         Vector4 v = table[id];
 
@@ -100,10 +112,10 @@ public class PlayerFloatSwing : MonoBehaviour
     {
         float t = Time.time;
 
-        float y = Mathf.Sin((t + phaseA) * floatSpeed * Mathf.PI * 2f) * floatAmplitude;
-        transform.position = basePos + new Vector3(0f, y, 0f);
+        float y = Mathf.Sin((t + phaseA) * floatSpeed * TWO_PI) * floatAmplitude;
+        tr.position = basePos + new Vector3(0f, y, 0f);
 
-        float rotZ = Mathf.Sin((t + phaseB) * swingSpeed * Mathf.PI * 2f) * swingAngle;
-        transform.rotation = Quaternion.Euler(0f, 0f, rotZ);
+        float rotZ = Mathf.Sin((t + phaseB) * swingSpeed * TWO_PI) * swingAngle;
+        tr.localRotation = Quaternion.Euler(0f, 0f, rotZ);
     }
 }

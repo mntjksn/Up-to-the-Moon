@@ -46,6 +46,15 @@ public class MissionDataManager : MonoBehaviour
 
     private Coroutine loadCo;
 
+    [Header("Optimization - Save")]
+    [SerializeField] private float saveDebounceSec = 0.5f; // 연속 저장 합치기
+    [SerializeField] private bool prettyPrint = false;     // 기본 false 권장(문자열/용량/GC 감소)
+
+    private Coroutine saveCo;
+    private bool saveDirty;
+
+    private string TargetPath => Path.Combine(Application.persistentDataPath, JSON_NAME);
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -79,7 +88,7 @@ public class MissionDataManager : MonoBehaviour
     {
         IsLoaded = false;
 
-        string targetPath = Path.Combine(Application.persistentDataPath, JSON_NAME);
+        string targetPath = TargetPath;
 
         if (!File.Exists(targetPath))
             yield return CopyFromStreamingAssetsIfNeeded(targetPath);
@@ -87,19 +96,28 @@ public class MissionDataManager : MonoBehaviour
         if (!File.Exists(targetPath))
         {
             SetEmptyAndFinish();
+            loadCo = null;
             yield break;
         }
 
-        string json = File.ReadAllText(targetPath);
+        // 파일 IO 프리즈 완화용: 한 프레임 양보
+        yield return null;
+
+        string json = null;
+        try { json = File.ReadAllText(targetPath); }
+        catch { json = null; }
+
         if (string.IsNullOrWhiteSpace(json))
         {
             SetEmptyAndFinish();
+            loadCo = null;
             yield break;
         }
 
         LoadFromJson(json);
 
         IsLoaded = true;
+        loadCo = null;
     }
 
     private IEnumerator CopyFromStreamingAssetsIfNeeded(string targetPath)
@@ -111,10 +129,16 @@ public class MissionDataManager : MonoBehaviour
         yield return req.SendWebRequest();
 
         if (req.result == UnityWebRequest.Result.Success)
-            File.WriteAllText(targetPath, req.downloadHandler.text);
+        {
+            try { File.WriteAllText(targetPath, req.downloadHandler.text); }
+            catch { }
+        }
 #else
         if (File.Exists(streamingPath))
-            File.Copy(streamingPath, targetPath, true);
+        {
+            try { File.Copy(streamingPath, targetPath, true); }
+            catch { }
+        }
 
         yield break;
 #endif
@@ -156,24 +180,89 @@ public class MissionDataManager : MonoBehaviour
         IsLoaded = true;
     }
 
-    // 현재 미션 상태를 JSON으로 저장
+    // -----------------------
+    // 저장 최적화
+    // -----------------------
+
+    // 기존처럼 외부에서 SaveToJson() 호출하면 됨.
+    // 이제는 "바로 저장"이 아니라, debounce로 합쳐서 저장.
     public void SaveToJson()
     {
-        string targetPath = Path.Combine(Application.persistentDataPath, JSON_NAME);
+        saveDirty = true;
+
+        if (!gameObject.activeInHierarchy) return;
+
+        if (saveCo == null)
+            saveCo = StartCoroutine(SaveRoutine());
+    }
+
+    private IEnumerator SaveRoutine()
+    {
+        // debounce: saveDebounceSec 동안 호출이 더 오면 합쳐짐
+        float t = 0f;
+        while (t < saveDebounceSec)
+        {
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (!saveDirty)
+        {
+            saveCo = null;
+            yield break;
+        }
+
+        saveDirty = false;
+
+        // JSON 생성/파일쓰기 전에 한 프레임 양보(게임 플레이 순간 멈춤 완화)
+        yield return null;
+
+        string targetPath = TargetPath;
 
         try
         {
-            var wrapper = new MissionItemListWrapper
-            {
-                missions = this.MissionItem
-            };
-
-            string json = JsonUtility.ToJson(wrapper, true);
+            var wrapper = new MissionItemListWrapper { missions = this.MissionItem };
+            string json = JsonUtility.ToJson(wrapper, prettyPrint);
             File.WriteAllText(targetPath, json);
         }
         catch (System.Exception e)
         {
-            Debug.LogError("[MissionDataManager] SaveToJson 실패: " + e.Message);
+            Debug.LogWarning("[MissionDataManager] SaveToJson 실패: " + e.Message);
         }
+
+        saveCo = null;
+
+        // 저장 중 또 dirty 됐으면 다시 예약
+        if (saveDirty)
+            saveCo = StartCoroutine(SaveRoutine());
+    }
+
+    // (선택) 앱 종료/백그라운드 시 즉시 저장하고 싶으면 여기서 강제 저장 가능
+    private void OnApplicationPause(bool pause)
+    {
+        if (!pause) return;
+        if (!saveDirty) return;
+
+        // 코루틴 저장 대기 중이면 여기서 한 번 강제 저장
+        ForceSaveNow();
+    }
+
+    private void OnApplicationQuit()
+    {
+        if (saveDirty)
+            ForceSaveNow();
+    }
+
+    private void ForceSaveNow()
+    {
+        saveDirty = false;
+
+        try
+        {
+            var wrapper = new MissionItemListWrapper { missions = this.MissionItem };
+            string json = JsonUtility.ToJson(wrapper, prettyPrint);
+            File.WriteAllText(TargetPath, json);
+        }
+        catch { }
     }
 }

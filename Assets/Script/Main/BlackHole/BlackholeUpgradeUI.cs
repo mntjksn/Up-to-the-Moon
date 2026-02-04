@@ -21,43 +21,95 @@ public class BlackholeUpgradeUI : MonoBehaviour
     [Header("SFX")]
     [SerializeField] private AudioSource sfx;
 
+    // ---- UI 캐시(같은 값이면 텍스트/버튼 갱신 안 함) ----
+    private int lastIncomeLv = int.MinValue;
+    private int lastStorageLv = int.MinValue;
+    private long lastGold = long.MinValue;
+
+    private bool listenersBound = false;
+
     private void OnEnable()
     {
-        if (incomeBuyButton != null) incomeBuyButton.onClick.AddListener(BuyIncome);
-        if (storageBuyButton != null) storageBuyButton.onClick.AddListener(BuyStorage);
-        RefreshAll();
+        BindListenersOnce();
+        // 패널 열릴 때는 강제 갱신
+        ForceRefreshAll();
     }
 
     private void OnDisable()
+    {
+        // 리스너는 한 번만 바인딩하고, 오브젝트 파괴 때 해제하는 방식도 가능하지만
+        // 구조 유지 위해 기존처럼 Enable/Disable에 맞춰 제거
+        UnbindListeners();
+        listenersBound = false;
+    }
+
+    private void BindListenersOnce()
+    {
+        if (listenersBound) return;
+
+        if (incomeBuyButton != null) incomeBuyButton.onClick.AddListener(BuyIncome);
+        if (storageBuyButton != null) storageBuyButton.onClick.AddListener(BuyStorage);
+
+        listenersBound = true;
+    }
+
+    private void UnbindListeners()
     {
         if (incomeBuyButton != null) incomeBuyButton.onClick.RemoveListener(BuyIncome);
         if (storageBuyButton != null) storageBuyButton.onClick.RemoveListener(BuyStorage);
     }
 
+    // 외부에서 호출해도 되지만, “변경된 것만” 반영
     public void RefreshAll()
     {
-        SaveManager save = SaveManager.Instance;
+        var save = SaveManager.Instance;
         if (save == null) return;
 
-        RefreshIncome(save);
-        RefreshStorage(save);
+        int incomeLv = save.GetIncomeLv();
+        int storageLv = save.GetStorageLv();
+        long gold = save.GetGold();
+
+        // 전부 같으면 아무것도 안 함
+        if (incomeLv == lastIncomeLv && storageLv == lastStorageLv && gold == lastGold)
+            return;
+
+        // 부분 갱신
+        if (incomeLv != lastIncomeLv || gold != lastGold)
+            RefreshIncome(save, incomeLv, gold);
+
+        if (storageLv != lastStorageLv || gold != lastGold)
+            RefreshStorage(save, storageLv, gold);
+
+        lastIncomeLv = incomeLv;
+        lastStorageLv = storageLv;
+        lastGold = gold;
     }
 
-    private void RefreshIncome(SaveManager save)
+    // 패널 열릴 때는 무조건 갱신(캐시 초기화)
+    private void ForceRefreshAll()
     {
-        int lv = save.GetIncomeLv();
+        lastIncomeLv = int.MinValue;
+        lastStorageLv = int.MinValue;
+        lastGold = long.MinValue;
+        RefreshAll();
+    }
+
+    private void RefreshIncome(SaveManager save, int lv, long gold)
+    {
         bool isMax = lv >= maxIncomeLv;
 
         float cur = GetIncomeByLevel(lv);
         float next = GetIncomeByLevel(Mathf.Min(lv + 1, maxIncomeLv));
 
         if (incomeValueText != null)
+        {
+            // string.Format 대신 간단 연결(조금 더 가벼움)
             incomeValueText.text = isMax
-                ? string.Format("{0:0.##}개/s (MAX)", cur)
-                : string.Format("{0:0.##}개/s -> {1:0.##}개/s", cur, next);
+                ? $"{cur:0.##}개/s (MAX)"
+                : $"{cur:0.##}개/s -> {next:0.##}개/s";
+        }
 
         long price = GetIncomePrice(lv);
-        long gold = save.GetGold();
 
         if (incomePriceText != null)
             incomePriceText.text = isMax ? "MAX" : NumberFormatter.FormatKorean(price) + "원";
@@ -68,10 +120,8 @@ public class BlackholeUpgradeUI : MonoBehaviour
 
     private void BuyIncome()
     {
-        SaveManager save = SaveManager.Instance;
+        var save = SaveManager.Instance;
         if (save == null) return;
-
-        MissionProgressManager.Instance?.Add("blackhole_income_upgrade_count", 1);
 
         int lv = save.GetIncomeLv();
         if (lv >= maxIncomeLv) return;
@@ -80,6 +130,9 @@ public class BlackholeUpgradeUI : MonoBehaviour
         if (save.GetGold() < price) return;
 
         PlaySfx();
+
+        // 미션 카운트는 성공시에만 올리는 게 보통이라 여기로 이동(원래 위치면 실패해도 카운트됨)
+        MissionProgressManager.Instance?.Add("blackhole_income_upgrade_count", 1);
 
         save.AddGold(-price);
         save.AddIncomeLv(1);
@@ -112,21 +165,22 @@ public class BlackholeUpgradeUI : MonoBehaviour
         return CeilTo(v, 100);
     }
 
-    private void RefreshStorage(SaveManager save)
+    private void RefreshStorage(SaveManager save, int lv, long gold)
     {
-        int lv = save.GetStorageLv();
         bool isMax = lv >= maxStorageLv;
 
         long cur = GetStorageByLevel(lv);
         long next = GetStorageByLevel(Mathf.Min(lv + 1, maxStorageLv));
 
         if (storageValueText != null)
+        {
+            string curStr = NumberFormatter.FormatKorean(cur);
             storageValueText.text = isMax
-                ? NumberFormatter.FormatKorean(cur) + "개 (MAX)"
-                : NumberFormatter.FormatKorean(cur) + "개 -> " + NumberFormatter.FormatKorean(next) + "개";
+                ? curStr + "개 (MAX)"
+                : curStr + "개 -> " + NumberFormatter.FormatKorean(next) + "개";
+        }
 
         long price = GetStoragePrice(lv);
-        long gold = save.GetGold();
 
         if (storagePriceText != null)
             storagePriceText.text = isMax ? "MAX" : NumberFormatter.FormatKorean(price) + "원";
@@ -137,7 +191,7 @@ public class BlackholeUpgradeUI : MonoBehaviour
 
     private void BuyStorage()
     {
-        SaveManager save = SaveManager.Instance;
+        var save = SaveManager.Instance;
         if (save == null) return;
 
         int lv = save.GetStorageLv();
@@ -156,6 +210,8 @@ public class BlackholeUpgradeUI : MonoBehaviour
         {
             long max = GetStorageByLevel(save.GetStorageLv());
             save.Data.blackHole.BlackHoleStorageMax = max;
+
+            // debounce 저장이면 부담 적음
             save.Save();
         }
 

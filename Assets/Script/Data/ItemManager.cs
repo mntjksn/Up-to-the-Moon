@@ -40,6 +40,14 @@ public class ItemManager : MonoBehaviour
 
     private const string JSON_NAME = "SupplyItemData.json";
 
+    [Header("Optimization")]
+    [SerializeField] private int spriteLoadsPerFrame = 6; // 프레임당 Resources.Load 개수(0이면 한 프레임에 전부)
+
+    // (GC 감소용) 재사용 버퍼
+    private readonly List<SupplyItem> unlockedBuffer = new List<SupplyItem>(64);
+
+    private Coroutine loadCo;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -51,24 +59,47 @@ public class ItemManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        StartCoroutine(LoadSupplyItemRoutine());
+        if (loadCo == null)
+            loadCo = StartCoroutine(LoadSupplyItemRoutine());
     }
 
-    // km 기준으로 해금된 아이템 목록 반환
+    // 기존 API 유지: 호출부 안 깨짐
+    // 단, 매번 new List 할당이 발생하므로 자주 호출되는 곳이면 아래 NonAlloc 버전으로 교체 추천
     public List<SupplyItem> GetUnlockedByKm(float km)
     {
         var list = new List<SupplyItem>();
+        GetUnlockedByKmNonAlloc(km, list);
+        return list;
+    }
+
+    // 최적화용: 외부에서 list를 재사용하면 GC 0
+    public void GetUnlockedByKmNonAlloc(float km, List<SupplyItem> results)
+    {
+        if (results == null) return;
+        results.Clear();
 
         if (SupplyItem == null || SupplyItem.Count == 0)
-            return list;
+            return;
 
+        int kmI = (int)km;
+
+        // (전제: zoneMinKm 오름차순이면 break로 더 빨라짐)
         for (int i = 0; i < SupplyItem.Count; i++)
         {
-            if (km >= SupplyItem[i].zoneMinKm)
-                list.Add(SupplyItem[i]);
-        }
+            var it = SupplyItem[i];
+            if (it == null) continue;
 
-        return list;
+            if (kmI >= it.zoneMinKm) results.Add(it);
+            else break; // 정렬되어 있다는 가정이면 여기서 끊어주는 게 이득
+        }
+    }
+
+    // 내부에서 바로 쓰기 편한 버퍼 반환(읽기 전용처럼 사용)
+    // 주의: 반환된 리스트는 다음 호출에서 내용이 바뀜!
+    public List<SupplyItem> GetUnlockedByKmCached(float km)
+    {
+        GetUnlockedByKmNonAlloc(km, unlockedBuffer);
+        return unlockedBuffer;
     }
 
     private IEnumerator LoadSupplyItemRoutine()
@@ -83,20 +114,34 @@ public class ItemManager : MonoBehaviour
         if (!File.Exists(targetPath))
         {
             SetEmptyAndFinish();
+            loadCo = null;
             yield break;
         }
 
-        string json = File.ReadAllText(targetPath);
+        // 파일 IO는 한 프레임 양보(로딩 프리즈 완화)
+        yield return null;
+
+        string json = null;
+        try { json = File.ReadAllText(targetPath); }
+        catch { json = null; }
+
         if (string.IsNullOrWhiteSpace(json))
         {
             SetEmptyAndFinish();
+            loadCo = null;
             yield break;
         }
 
         LoadFromJson(json);
-        LoadSpritesOnce();
+
+        // zoneMinKm 정렬해두면 GetUnlockedByKm에서 break 가능
+        SortByZoneMinKm();
+
+        // Resources.Load 프레임 분산
+        yield return LoadSpritesSpread();
 
         IsLoaded = true;
+        loadCo = null;
     }
 
     private IEnumerator CopyFromStreamingAssetsIfNeeded(string targetPath)
@@ -108,10 +153,16 @@ public class ItemManager : MonoBehaviour
         yield return req.SendWebRequest();
 
         if (req.result == UnityWebRequest.Result.Success)
-            File.WriteAllText(targetPath, req.downloadHandler.text);
+        {
+            try { File.WriteAllText(targetPath, req.downloadHandler.text); }
+            catch { }
+        }
 #else
         if (File.Exists(streamingPath))
-            File.Copy(streamingPath, targetPath, true);
+        {
+            try { File.Copy(streamingPath, targetPath, true); }
+            catch { }
+        }
 
         yield break;
 #endif
@@ -147,18 +198,36 @@ public class ItemManager : MonoBehaviour
             : new List<SupplyItem>();
     }
 
-    private void LoadSpritesOnce()
+    private void SortByZoneMinKm()
     {
         if (SupplyItem == null) return;
+        SupplyItem.Sort((a, b) => a.zoneMinKm.CompareTo(b.zoneMinKm));
+    }
+
+    private IEnumerator LoadSpritesSpread()
+    {
+        if (SupplyItem == null) yield break;
+
+        int loadedThisFrame = 0;
 
         for (int i = 0; i < SupplyItem.Count; i++)
         {
-            SupplyItem item = SupplyItem[i];
-
+            var item = SupplyItem[i];
             if (item == null) continue;
+            if (item.itemimg != null) continue;
             if (string.IsNullOrEmpty(item.spritePath)) continue;
 
             item.itemimg = Resources.Load<Sprite>(item.spritePath);
+
+            if (spriteLoadsPerFrame > 0)
+            {
+                loadedThisFrame++;
+                if (loadedThisFrame >= spriteLoadsPerFrame)
+                {
+                    loadedThisFrame = 0;
+                    yield return null;
+                }
+            }
         }
     }
 

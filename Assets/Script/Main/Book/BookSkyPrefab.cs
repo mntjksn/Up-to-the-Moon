@@ -11,32 +11,54 @@ public class BookSkyPrefab : MonoBehaviour
 
     private int bookIndex = -1;
 
-    // 슬롯에서 호출
+    // 마지막 반영값 캐시 (불필요한 UI rebuild 방지)
+    private Sprite lastSprite;
+    private string lastName;
+    private string lastSub;
+
     public void Init(int index)
     {
         bookIndex = index;
+
+        // index 바뀌면 캐시 무효화
+        lastSprite = null;
+        lastName = null;
+        lastSub = null;
+
         Refresh();
     }
 
     public void Refresh()
     {
-        BackgroundManager bg = BackgroundManager.Instance;
+        var bg = BackgroundManager.Instance;
         if (bg == null || !bg.IsLoaded) return;
 
         var list = bg.BackgroundItem;
         if (list == null) return;
-        if (bookIndex < 0 || bookIndex >= list.Count) return;
+        if ((uint)bookIndex >= (uint)list.Count) return;
 
-        BackgroundItem item = list[bookIndex];
+        var item = list[bookIndex];
         if (item == null) return;
 
-        if (thisimg != null)
+        // 스프라이트
+        if (thisimg != null && item.itemimg != null && lastSprite != item.itemimg)
+        {
             thisimg.sprite = item.itemimg;
+            lastSprite = item.itemimg;
+        }
 
-        if (chname != null)
+        // 이름 텍스트
+        if (chname != null && item.name != null && !string.Equals(lastName, item.name))
+        {
             chname.text = item.name;
+            lastName = item.name;
+        }
 
-        if (sub != null)
+        // 서브 텍스트
+        if (sub != null && item.sub != null && !string.Equals(lastSub, item.sub))
+        {
             sub.text = item.sub;
+            lastSub = item.sub;
+        }
     }
 }

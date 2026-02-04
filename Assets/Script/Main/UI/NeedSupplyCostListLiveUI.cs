@@ -5,23 +5,33 @@ using UnityEngine;
 public class NeedSupplyCostListLiveUI : MonoBehaviour
 {
     [Header("UI")]
-    [SerializeField] private Transform parent;       // row들이 붙을 곳(없으면 자기 자신)
-    [SerializeField] private GameObject rowPrefab;   // Panel_Supply_Cost_Live
+    [SerializeField] private Transform parent;
+    [SerializeField] private GameObject rowPrefab;
     [SerializeField] private bool hideWhenNoCost = true;
 
     [Header("Auto Step From Unlock")]
     [SerializeField] private bool autoDetectStep = true;
-    [SerializeField] private float autoRefreshInterval = 0.25f; // unlock 변동 감지용(가벼운 폴링)
+    [SerializeField] private float autoRefreshInterval = 0.25f;
 
     private int currentStep = -1;
     private int lastUnlockedIndex = -999;
-
     private bool lastUpgradeCompleted = false;
 
     // itemId -> rowUI 캐시
     private readonly Dictionary<int, SupplyCostRowLiveUI> rows = new Dictionary<int, SupplyCostRowLiveUI>();
 
+    // ★ row 풀(Instantiate/Destroy 스파이크 방지)
+    private readonly Stack<SupplyCostRowLiveUI> rowPool = new Stack<SupplyCostRowLiveUI>(16);
+
+    // ★ 업그레이드 완료 여부 판정 최적화용 캐시
+    private int cachedTargetItemNum = int.MinValue;
+    private int cachedTargetIndex = -1; // CharacterItem에서 찾은 index
+
     private Coroutine autoCo;
+
+    // ★ 리소스 변경 이벤트가 너무 자주 오면 디바운스(1프레임에 1번만 갱신)
+    private bool refreshPending = false;
+    private Coroutine refreshCo;
 
     private void Awake()
     {
@@ -32,7 +42,7 @@ public class NeedSupplyCostListLiveUI : MonoBehaviour
     {
         var sm = SaveManager.Instance;
         if (sm != null)
-            sm.OnResourceChanged += RefreshHaveCounts;
+            sm.OnResourceChanged += RequestRefresh;
 
         if (autoDetectStep)
         {
@@ -40,40 +50,52 @@ public class NeedSupplyCostListLiveUI : MonoBehaviour
             autoCo = StartCoroutine(AutoDetectRoutine());
         }
 
-        RefreshHaveCounts();
+        RequestRefresh();
     }
 
     private void OnDisable()
     {
         var sm = SaveManager.Instance;
         if (sm != null)
-            sm.OnResourceChanged -= RefreshHaveCounts;
+            sm.OnResourceChanged -= RequestRefresh;
 
         if (autoCo != null)
         {
             StopCoroutine(autoCo);
             autoCo = null;
         }
+
+        if (refreshCo != null)
+        {
+            StopCoroutine(refreshCo);
+            refreshCo = null;
+        }
+
+        refreshPending = false;
     }
 
-    /// <summary>
-    /// (선택) 외부에서 직접 step 지정하고 싶을 때만 사용
-    /// </summary>
     public void SetStep(int step)
     {
         step = Mathf.Max(0, step);
-        if (currentStep == step) { RefreshHaveCounts(); return; }
+        if (currentStep == step) { RequestRefresh(); return; }
 
         currentStep = step;
-        lastUpgradeCompleted = IsUpgradeCompleted();
+
+        // ★ step 바뀌면 업그레이드 판정 캐시 갱신
+        CacheTargetIndex();
+
+        lastUpgradeCompleted = IsUpgradeCompleted_Cached();
         RebuildRows();
-        RefreshHaveCounts();
+        RequestRefresh();
     }
 
     public void Clear()
     {
         currentStep = -1;
         lastUnlockedIndex = -999;
+        cachedTargetItemNum = int.MinValue;
+        cachedTargetIndex = -1;
+
         RebuildToEmpty();
 
         if (hideWhenNoCost) gameObject.SetActive(false);
@@ -81,11 +103,10 @@ public class NeedSupplyCostListLiveUI : MonoBehaviour
     }
 
     // ─────────────────────────────
-    // 핵심: unlock 상태에서 step 자동 계산
+    // unlock 상태에서 step 자동 계산
     // ─────────────────────────────
     private IEnumerator AutoDetectRoutine()
     {
-        // 매니저 준비될 때까지 대기
         while (CharacterManager.Instance == null || !CharacterManager.Instance.IsLoaded)
             yield return null;
 
@@ -95,10 +116,8 @@ public class NeedSupplyCostListLiveUI : MonoBehaviour
         while (ItemManager.Instance == null || !ItemManager.Instance.IsLoaded)
             yield return null;
 
-        // 첫 1회 적용
         AutoUpdateStepIfChanged(force: true);
 
-        // 이후 주기적으로 unlock 변동 감지
         var wait = new WaitForSecondsRealtime(Mathf.Max(0.05f, autoRefreshInterval));
         while (true)
         {
@@ -116,16 +135,18 @@ public class NeedSupplyCostListLiveUI : MonoBehaviour
             return;
         }
 
-        // "가장 큰 item_num 중 unlock=true" 찾기
+        // ★ newestUnlocked 찾기: 역순 탐색 + 첫 발견 시 break (매틱 O(n) -> 평균 단축)
         int newestUnlocked = -1;
-        for (int i = 0; i < cm.CharacterItem.Count; i++)
+        for (int i = cm.CharacterItem.Count - 1; i >= 0; i--)
         {
             var it = cm.CharacterItem[i];
             if (it != null && it.item_unlock)
+            {
                 newestUnlocked = i;
+                break;
+            }
         }
 
-        // unlock이 하나도 없으면 표시 안 함
         if (newestUnlocked < 0)
         {
             if (force || lastUnlockedIndex != newestUnlocked)
@@ -136,8 +157,6 @@ public class NeedSupplyCostListLiveUI : MonoBehaviour
             return;
         }
 
-        // 다음 업그레이드 step = (unlock된 캐릭터의 item_num + 1)
-        // ※ 너 기존 규칙 그대로
         int step = cm.CharacterItem[newestUnlocked].item_num + 1;
 
         if (force || lastUnlockedIndex != newestUnlocked || currentStep != step)
@@ -146,12 +165,12 @@ public class NeedSupplyCostListLiveUI : MonoBehaviour
             SetStep(step);
         }
 
-        bool nowCompleted = IsUpgradeCompleted(); // 너가 방금 만든 함수
-
+        // ★ 완료 체크: 캐시 기반
+        bool nowCompleted = IsUpgradeCompleted_Cached();
         if (force || nowCompleted != lastUpgradeCompleted)
         {
             lastUpgradeCompleted = nowCompleted;
-            RefreshHaveCounts(); // 여기서 SetUpgradeCompleted()까지 들어가게 됨
+            RequestRefresh();
         }
     }
 
@@ -172,8 +191,7 @@ public class NeedSupplyCostListLiveUI : MonoBehaviour
         var costs = ucm.GetCostsByStep(currentStep);
         if (costs == null || costs.Count == 0)
         {
-            if (hideWhenNoCost) gameObject.SetActive(false);
-            else gameObject.SetActive(true);
+            gameObject.SetActive(!hideWhenNoCost);
             return;
         }
 
@@ -186,47 +204,94 @@ public class NeedSupplyCostListLiveUI : MonoBehaviour
             var mat = im.GetItem(c.itemId);
             Sprite spr = (mat != null) ? mat.itemimg : null;
 
-            var go = Instantiate(rowPrefab, parent);
-            var row = go.GetComponent<SupplyCostRowLiveUI>();
-            if (row == null)
-            {
-                Debug.LogError("[NeedSupplyCostListLiveUI] rowPrefab에 SupplyCostRowLiveUI가 없음");
-                Destroy(go);
-                continue;
-            }
+            // ★ 풀에서 재사용
+            var row = GetRowFromPool();
+            row.transform.SetParent(parent, false);
+            row.gameObject.SetActive(true);
 
-            // row가 "have / need" 표기 가능하게 만들려면
-            // Setup에서 need를 저장하고, SetHave에서 have/need 텍스트로 갱신하면 됨
             row.Setup(c.itemId, spr, c.count);
             rows[c.itemId] = row;
         }
     }
 
+    private SupplyCostRowLiveUI GetRowFromPool()
+    {
+        if (rowPool.Count > 0)
+            return rowPool.Pop();
+
+        var go = Instantiate(rowPrefab);
+        var row = go.GetComponent<SupplyCostRowLiveUI>();
+        if (row == null)
+        {
+            Debug.LogError("[NeedSupplyCostListLiveUI] rowPrefab에 SupplyCostRowLiveUI가 없음");
+            Destroy(go);
+            return null;
+        }
+        return row;
+    }
+
     private void RebuildToEmpty()
     {
+        // ★ Destroy 대신 풀로 회수 (모바일 스파이크 원인 제거)
         rows.Clear();
         if (parent == null) return;
 
         for (int i = parent.childCount - 1; i >= 0; i--)
-            Destroy(parent.GetChild(i).gameObject);
+        {
+            var t = parent.GetChild(i);
+            var row = t.GetComponent<SupplyCostRowLiveUI>();
+            if (row != null)
+            {
+                row.gameObject.SetActive(false);
+                row.transform.SetParent(transform, false); // 임시 보관
+                rowPool.Push(row);
+            }
+            else
+            {
+                // 혹시 다른 오브젝트가 섞여있으면 기존대로
+                Destroy(t.gameObject);
+            }
+        }
     }
 
-    private void RefreshHaveCounts()
+    // ─────────────────────────────
+    // Refresh 디바운스(이벤트 폭주 방지)
+    // ─────────────────────────────
+    private void RequestRefresh()
+    {
+        if (!isActiveAndEnabled) return;
+
+        if (refreshPending) return;
+        refreshPending = true;
+
+        if (refreshCo != null) StopCoroutine(refreshCo);
+        refreshCo = StartCoroutine(RefreshEndOfFrame());
+    }
+
+    private IEnumerator RefreshEndOfFrame()
+    {
+        // 같은 프레임에 여러 번 호출돼도 1번만 실제 갱신
+        yield return null;
+
+        refreshPending = false;
+        RefreshHaveCounts_Immediate();
+    }
+
+    private void RefreshHaveCounts_Immediate()
     {
         var sm = SaveManager.Instance;
         if (sm == null) return;
 
         foreach (var kv in rows)
         {
-            int itemId = kv.Key;
             var row = kv.Value;
             if (row == null) continue;
 
-            int have = sm.GetResource(itemId);
+            int have = sm.GetResource(kv.Key);
             row.SetHave(have);
         }
 
-        if (rows.Count > 0 && IsUpgradeCompleted())
+        if (rows.Count > 0 && lastUpgradeCompleted) // ★ 이미 계산된 값 사용
         {
             foreach (var kv in rows)
             {
@@ -236,24 +301,50 @@ public class NeedSupplyCostListLiveUI : MonoBehaviour
         }
     }
 
-    private bool IsUpgradeCompleted()
+    // ─────────────────────────────
+    // 업그레이드 완료 체크 최적화(캐시)
+    // ─────────────────────────────
+    private void CacheTargetIndex()
     {
         var cm = CharacterManager.Instance;
-        if (cm == null || !cm.IsLoaded || cm.CharacterItem == null) return false;
+        if (cm == null || !cm.IsLoaded || cm.CharacterItem == null)
+        {
+            cachedTargetItemNum = int.MinValue;
+            cachedTargetIndex = -1;
+            return;
+        }
 
-        // 너가 currentStep을 "업그레이드 비용 step"으로 쓰고 있으니
-        // step = (캐릭터 item_num + 1) 규칙이면
         int targetItemNum = currentStep - 1;
-        if (targetItemNum < 0) return false;
+        cachedTargetItemNum = targetItemNum;
+        cachedTargetIndex = -1;
 
-        // item_num으로 찾기 (index랑 item_num이 항상 같다는 보장이 없어서 안전하게)
+        if (targetItemNum < 0) return;
+
+        // item_num으로 찾기 (한 번만)
         for (int i = 0; i < cm.CharacterItem.Count; i++)
         {
             var it = cm.CharacterItem[i];
             if (it != null && it.item_num == targetItemNum)
-                return it.item_upgrade;
+            {
+                cachedTargetIndex = i;
+                break;
+            }
+        }
+    }
+
+    private bool IsUpgradeCompleted_Cached()
+    {
+        var cm = CharacterManager.Instance;
+        if (cm == null || !cm.IsLoaded || cm.CharacterItem == null) return false;
+
+        if (cachedTargetItemNum != currentStep - 1 || cachedTargetIndex < 0 || cachedTargetIndex >= cm.CharacterItem.Count)
+        {
+            CacheTargetIndex();
         }
 
-        return false;
+        if (cachedTargetIndex < 0) return false;
+
+        var it = cm.CharacterItem[cachedTargetIndex];
+        return it != null && it.item_upgrade;
     }
 }

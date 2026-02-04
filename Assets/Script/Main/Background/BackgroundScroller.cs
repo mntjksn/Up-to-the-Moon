@@ -35,16 +35,12 @@ public class BackgroundLoopUI : MonoBehaviour
 
     private void Start()
     {
-        if (bg1 == null || bg2 == null) return;
-
-        height = bg1.rect.height;
-
-        bg1.anchoredPosition = Vector2.zero;
-        bg2.anchoredPosition = new Vector2(0f, height);
+        InitPositions();
     }
 
     private void OnEnable()
     {
+        InitPositions(); // 씬/패널 재활성 시 위치 꼬임 방지(선택)
         TryBindToSaveManager();
     }
 
@@ -57,6 +53,18 @@ public class BackgroundLoopUI : MonoBehaviour
             StopCoroutine(initCo);
             initCo = null;
         }
+    }
+
+    private void InitPositions()
+    {
+        if (bg1 == null || bg2 == null) return;
+
+        // height가 0으로 잡히는 경우(레이아웃 아직 안 잡힘) 대비
+        height = bg1.rect.height;
+        if (height <= 0f) height = 1f;
+
+        bg1.anchoredPosition = Vector2.zero;
+        bg2.anchoredPosition = new Vector2(0f, height);
     }
 
     private void TryBindToSaveManager()
@@ -98,7 +106,7 @@ public class BackgroundLoopUI : MonoBehaviour
 
     private void ApplySpeedByCharacter(int id)
     {
-        if (id < 0 || id >= speedTable.Length) return;
+        if ((uint)id >= (uint)speedTable.Length) return; // 범위체크 빠르게
         moveSpeed = speedTable[id];
     }
 
@@ -107,15 +115,21 @@ public class BackgroundLoopUI : MonoBehaviour
         if (bg1 == null || bg2 == null) return;
 
         float dy = moveSpeed * Time.deltaTime;
-        Vector2 delta = new Vector2(0f, dy);
 
-        bg1.anchoredPosition -= delta;
-        bg2.anchoredPosition -= delta;
+        // anchoredPosition get/set 최소화 (로컬로 계산 후 1번씩만 set)
+        Vector2 p1 = bg1.anchoredPosition;
+        Vector2 p2 = bg2.anchoredPosition;
 
-        if (bg1.anchoredPosition.y <= -height)
-            bg1.anchoredPosition = new Vector2(0f, bg2.anchoredPosition.y + height);
+        p1.y -= dy;
+        p2.y -= dy;
 
-        if (bg2.anchoredPosition.y <= -height)
-            bg2.anchoredPosition = new Vector2(0f, bg1.anchoredPosition.y + height);
+        if (p1.y <= -height)
+            p1.y = p2.y + height;
+
+        if (p2.y <= -height)
+            p2.y = p1.y + height;
+
+        bg1.anchoredPosition = p1;
+        bg2.anchoredPosition = p2;
     }
 }

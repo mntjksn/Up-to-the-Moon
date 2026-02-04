@@ -13,6 +13,7 @@ public class StorageManager : MonoBehaviour
     public readonly List<SupplySlot> slots = new List<SupplySlot>();
 
     private Coroutine buildCo;
+    private bool built = false; // 추가
 
     private void Awake()
     {
@@ -22,6 +23,13 @@ public class StorageManager : MonoBehaviour
 
     private void OnEnable()
     {
+        // 한 번 만들었으면 재사용
+        if (built)
+        {
+            RefreshAllSlots();
+            return;
+        }
+
         if (buildCo == null)
             buildCo = StartCoroutine(BuildWhenReady());
     }
@@ -59,6 +67,7 @@ public class StorageManager : MonoBehaviour
         BuildSlots(items.Count);
         RefreshAllSlots();
 
+        built = true;      // 추가
         buildCo = null;
     }
 
@@ -73,8 +82,7 @@ public class StorageManager : MonoBehaviour
         {
             var obj = Instantiate(slotPrefab, content);
 
-            SupplySlot slot;
-            if (!obj.TryGetComponent(out slot))
+            if (!obj.TryGetComponent(out SupplySlot slot))
             {
                 Debug.LogError("[StorageManager] slotPrefab에 SupplySlot 컴포넌트가 없습니다.");
                 Destroy(obj);

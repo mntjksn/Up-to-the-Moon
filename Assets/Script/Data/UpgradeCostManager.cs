@@ -38,7 +38,12 @@ public class UpgradeCostManager : MonoBehaviour
     private const string JSON_NAME = "UpgradeCostData.json";
 
     // step -> UpgradeStep 빠른 조회용
-    private readonly Dictionary<int, UpgradeStep> stepMap = new Dictionary<int, UpgradeStep>();
+    private readonly Dictionary<int, UpgradeStep> stepMap = new Dictionary<int, UpgradeStep>(256);
+
+    // GC 방지: 빈 리스트 재사용
+    private static readonly List<Cost> EmptyCosts = new List<Cost>(0);
+
+    private Coroutine loadCo;
 
     private void Awake()
     {
@@ -51,7 +56,8 @@ public class UpgradeCostManager : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        StartCoroutine(LoadUpgradeCostRoutine());
+        if (loadCo == null)
+            loadCo = StartCoroutine(LoadUpgradeCostRoutine());
     }
 
     private IEnumerator LoadUpgradeCostRoutine()
@@ -66,13 +72,21 @@ public class UpgradeCostManager : MonoBehaviour
         if (!File.Exists(targetPath))
         {
             SetEmptyAndFinish();
+            loadCo = null;
             yield break;
         }
 
-        string json = File.ReadAllText(targetPath);
+        // 파일 IO 프리즈 완화: 한 프레임 양보
+        yield return null;
+
+        string json = null;
+        try { json = File.ReadAllText(targetPath); }
+        catch { json = null; }
+
         if (string.IsNullOrWhiteSpace(json))
         {
             SetEmptyAndFinish();
+            loadCo = null;
             yield break;
         }
 
@@ -80,6 +94,7 @@ public class UpgradeCostManager : MonoBehaviour
         BuildMap();
 
         IsLoaded = true;
+        loadCo = null;
     }
 
     private IEnumerator CopyFromStreamingAssetsIfNeeded(string targetPath)
@@ -91,14 +106,24 @@ public class UpgradeCostManager : MonoBehaviour
         yield return req.SendWebRequest();
 
         if (req.result == UnityWebRequest.Result.Success)
-            File.WriteAllText(targetPath, req.downloadHandler.text);
+        {
+            try { File.WriteAllText(targetPath, req.downloadHandler.text); }
+            catch { }
+        }
         else
+        {
             Debug.LogError("[UpgradeCostManager] StreamingAssets JSON 로드 실패: " + req.error);
+        }
 #else
         if (File.Exists(streamingPath))
-            File.Copy(streamingPath, targetPath, true);
+        {
+            try { File.Copy(streamingPath, targetPath, true); }
+            catch { }
+        }
         else
+        {
             Debug.LogWarning("[UpgradeCostManager] StreamingAssets에 JSON이 없습니다: " + streamingPath);
+        }
 
         yield break;
 #endif
@@ -163,15 +188,27 @@ public class UpgradeCostManager : MonoBehaviour
         }
     }
 
-    // step으로 비용 리스트 가져오기
+    // 기존 API 유지: 호출부 안 깨짐 (단, 이제 GC 없는 빈 리스트 반환)
     public List<Cost> GetCostsByStep(int step)
     {
-        if (!IsLoaded) return new List<Cost>();
+        if (!IsLoaded) return EmptyCosts;
 
-        UpgradeStep s;
-        if (stepMap.TryGetValue(step, out s) && s != null && s.costs != null)
+        if (stepMap.TryGetValue(step, out var s) && s != null && s.costs != null)
             return s.costs;
 
-        return new List<Cost>();
+        return EmptyCosts;
+    }
+
+    // 최적화용: 결과 리스트를 재사용하고 싶을 때
+    public void GetCostsByStepNonAlloc(int step, List<Cost> results)
+    {
+        if (results == null) return;
+        results.Clear();
+
+        var costs = GetCostsByStep(step);
+        if (costs == null || costs.Count == 0) return;
+
+        // Cost는 class라 얕은 복사(참조)만 들어감
+        results.AddRange(costs);
     }
 }

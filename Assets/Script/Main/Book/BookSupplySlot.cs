@@ -10,14 +10,24 @@ public class BookSupplySlot : MonoBehaviour
 
     [Header("UI")]
     [SerializeField] private Image icon;
+
+    [Tooltip("상세 패널 프리팹(BookSupplyPrefab 컴포넌트 포함)")]
     [SerializeField] private GameObject bookSupplyPrefab;
 
-    private Transform canvas2;
+    [Header("Optional Refs")]
+    [Tooltip("Canvas2를 인스펙터로 넣으면 Find 안 씀(추천)")]
+    [SerializeField] private Transform canvas2;
+
+    // 상세 패널 1개만 재사용
+    private static BookSupplyPrefab openedPanel;
 
     private void Awake()
     {
-        GameObject c = GameObject.Find("Canvas2");
-        canvas2 = (c != null) ? c.transform : null;
+        if (canvas2 == null)
+        {
+            var c = GameObject.Find("Canvas2");
+            canvas2 = (c != null) ? c.transform : null;
+        }
 
         if (canvas2 == null)
             Debug.LogError("[BookSupplySlot] Canvas2를 찾지 못했습니다. Hierarchy 이름이 Canvas2인지 확인하세요.");
@@ -46,7 +56,7 @@ public class BookSupplySlot : MonoBehaviour
         }
 
         var list = im.SupplyItem;
-        if (list == null || index < 0 || index >= list.Count)
+        if (list == null || (uint)index >= (uint)list.Count)
         {
             ApplyUI(null);
             return;
@@ -61,13 +71,16 @@ public class BookSupplySlot : MonoBehaviour
 
         if (it != null && it.itemimg != null)
         {
-            icon.enabled = true;
-            icon.sprite = it.itemimg;
+            if (!icon.enabled) icon.enabled = true;
+
+            // 동일 sprite면 재할당 스킵
+            if (icon.sprite != it.itemimg)
+                icon.sprite = it.itemimg;
         }
         else
         {
-            icon.enabled = false;
-            icon.sprite = null;
+            if (icon.enabled) icon.enabled = false;
+            if (icon.sprite != null) icon.sprite = null;
         }
     }
 
@@ -79,17 +92,27 @@ public class BookSupplySlot : MonoBehaviour
             return;
         }
 
-        GameObject go = Instantiate(bookSupplyPrefab, canvas2);
-
-        RectTransform rt = go.GetComponent<RectTransform>();
-        if (rt != null)
+        // 이미 열린 패널 있으면 재사용
+        if (openedPanel == null)
         {
-            rt.anchoredPosition = Vector2.zero;
-            rt.localScale = Vector3.one;
+            GameObject go = Instantiate(bookSupplyPrefab, canvas2);
+
+            RectTransform rt = go.GetComponent<RectTransform>();
+            if (rt != null)
+            {
+                rt.anchoredPosition = Vector2.zero;
+                rt.localScale = Vector3.one;
+            }
+
+            openedPanel = go.GetComponent<BookSupplyPrefab>();
+            if (openedPanel == null)
+            {
+                Debug.LogError("[BookSupplySlot] bookSupplyPrefab에 BookSupplyPrefab 컴포넌트가 없습니다.");
+                Destroy(go);
+                return;
+            }
         }
 
-        BookSupplyPrefab panel = go.GetComponent<BookSupplyPrefab>();
-        if (panel != null)
-            panel.Init(index);
+        openedPanel.Init(index);
     }
 }

@@ -11,43 +11,80 @@ public class SurpriseBoxFloatDown : MonoBehaviour
     [SerializeField] private float rotateSpeed = 0f;
     [SerializeField] private float destroyPadding = 1.5f;
 
+    private Transform tr;
+    private Camera cam;
+
     private float baseX;
     private float seed;
     private Vector3 pos;
 
+    // 화면 하단 y 캐시
+    private float cachedBottomY;
+    private int cachedScreenW;
+    private int cachedScreenH;
+
+    // sin용 시간 누적
+    private float phase;
+
     private void Awake()
     {
-        pos = transform.position;
+        tr = transform;
+
+        pos = tr.position;
         baseX = pos.x;
+
         seed = Random.Range(0f, 1000f);
+        phase = seed;
+
+        CacheCameraAndBottom();
+    }
+
+    private void OnEnable()
+    {
+        // 혹시 씬 로드/카메라 교체에 대비
+        CacheCameraAndBottom();
     }
 
     private void Update()
     {
-        // 아래로 이동
-        pos.y -= fallSpeed * Time.deltaTime;
+        float dt = Time.deltaTime;
 
-        // 좌우 흔들림
-        float xOffset = Mathf.Sin((Time.time + seed) * (Mathf.PI * 2f) * swayFrequency) * swayAmplitude;
+        // 아래로 이동
+        pos.y -= fallSpeed * dt;
+
+        // 좌우 흔들림 (Time.time 대신 누적값)
+        phase += dt * swayFrequency * (Mathf.PI * 2f);
+        float xOffset = Mathf.Sin(phase) * swayAmplitude;
         pos.x = baseX + xOffset;
 
-        transform.position = pos;
+        tr.position = pos;
 
         // 회전(선택)
         if (rotateSpeed != 0f)
-            transform.Rotate(0f, 0f, rotateSpeed * Time.deltaTime);
+            tr.Rotate(0f, 0f, rotateSpeed * dt);
 
         DestroyIfOutOfScreen();
     }
 
+    private void CacheCameraAndBottom()
+    {
+        cam = Camera.main;
+        cachedScreenW = Screen.width;
+        cachedScreenH = Screen.height;
+
+        if (cam != null)
+            cachedBottomY = cam.ViewportToWorldPoint(new Vector3(0.5f, 0f, 0f)).y;
+    }
+
     private void DestroyIfOutOfScreen()
     {
-        var cam = Camera.main;
+        // 해상도 변경/회전 대응 (필요할 때만 재계산)
+        if (cam == null || cachedScreenW != Screen.width || cachedScreenH != Screen.height)
+            CacheCameraAndBottom();
+
         if (cam == null) return;
 
-        float bottomY = cam.ViewportToWorldPoint(new Vector3(0.5f, 0f, 0f)).y;
-
-        if (transform.position.y < bottomY - destroyPadding)
+        if (pos.y < cachedBottomY - destroyPadding)
             Destroy(gameObject);
     }
 }

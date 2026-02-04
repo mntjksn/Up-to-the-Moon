@@ -14,6 +14,10 @@ public class SupplySlot : MonoBehaviour
     private bool initialized = false;
     private SupplyItem item;
 
+    // 캐시
+    private int itemId = -1;
+    private int lastOwned = int.MinValue;
+
     private void OnEnable()
     {
         var sm = SaveManager.Instance;
@@ -24,7 +28,7 @@ public class SupplySlot : MonoBehaviour
         }
 
         if (initialized)
-            Refresh();
+            RefreshDynamicOnly(force: true); // 전체 Refresh 말고 수량만
     }
 
     private void OnDisable()
@@ -38,43 +42,49 @@ public class SupplySlot : MonoBehaviour
     {
         index = idx;
         initialized = true;
-        Refresh();
+
+        BindItemStatic();              // 아이콘 1회 세팅
+        RefreshDynamicOnly(force: true); // 수량 표시
     }
 
     private void OnResourceChanged()
     {
         if (!initialized) return;
-        Refresh();
+        RefreshDynamicOnly(force: false); // 변경 있을 때만
     }
 
-    public void Refresh()
+    // 아이콘/아이템 연결(고정 UI)
+    private void BindItemStatic()
     {
         var im = ItemManager.Instance;
         if (im == null || !im.IsLoaded)
         {
-            ApplyUI(null);
+            ApplyEmpty();
             return;
         }
 
         var list = im.SupplyItem;
-        if (list == null || index < 0 || index >= list.Count)
+        if (list == null || (uint)index >= (uint)list.Count)
         {
-            ApplyUI(null);
+            ApplyEmpty();
             return;
         }
 
         item = list[index];
-        ApplyUI(item);
-    }
+        if (item == null)
+        {
+            ApplyEmpty();
+            return;
+        }
 
-    private void ApplyUI(SupplyItem it)
-    {
+        itemId = item.item_num;
+
         if (icon != null)
         {
-            if (it != null && it.itemimg != null)
+            if (item.itemimg != null)
             {
                 icon.enabled = true;
-                icon.sprite = it.itemimg;
+                icon.sprite = item.itemimg;
             }
             else
             {
@@ -83,18 +93,45 @@ public class SupplySlot : MonoBehaviour
             }
         }
 
-        if (countText != null)
+        // 캐시 초기화
+        lastOwned = int.MinValue;
+    }
+
+    // 수량 텍스트만 (자주 호출되는 부분)
+    private void RefreshDynamicOnly(bool force)
+    {
+        if (item == null || itemId < 0)
         {
-            if (it == null)
-            {
-                countText.text = "";
-                return;
-            }
-
-            var sm = SaveManager.Instance;
-            int owned = (sm != null) ? sm.GetResource(it.item_num) : 0;
-
-            countText.text = NumberFormatter.FormatKorean(owned) + "개";
+            if (force) ApplyEmpty();
+            return;
         }
+
+        var sm = SaveManager.Instance;
+        int owned = (sm != null) ? sm.GetResource(itemId) : 0;
+
+        if (!force && owned == lastOwned)
+            return;
+
+        lastOwned = owned;
+
+        if (countText != null)
+            countText.text = NumberFormatter.FormatKorean(owned) + "개";
+    }
+
+    private void ApplyEmpty()
+    {
+        item = null;
+        itemId = -1;
+        lastOwned = int.MinValue;
+
+        if (icon != null) { icon.sprite = null; icon.enabled = false; }
+        if (countText != null) countText.text = "";
+    }
+
+    // 기존 호환: 외부에서 Refresh 호출하면 전체 재바인딩
+    public void Refresh()
+    {
+        BindItemStatic();
+        RefreshDynamicOnly(force: true);
     }
 }

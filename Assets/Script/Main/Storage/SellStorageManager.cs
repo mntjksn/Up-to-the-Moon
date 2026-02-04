@@ -15,10 +15,21 @@ public class SellStorageManager : MonoBehaviour
     [SerializeField] private TextMeshProUGUI currentAmountText;
     [SerializeField] private TextMeshProUGUI percentText;
 
+    [Header("Perf")]
+    [SerializeField] private float topUiDebounceSec = 0.15f; // 모바일용 디바운스
+
     public readonly List<SupplySellSlot> slots = new List<SupplySellSlot>();
 
     private Coroutine buildCo;
     private Coroutine bindCo;
+
+    // Top UI 업데이트 합치기
+    private bool topUiDirty;
+    private float nextTopUiTime;
+
+    // 같은 값이면 TMP 재할당 방지
+    private long lastTotal = -1;
+    private int lastPercent = -1;
 
     private void Awake()
     {
@@ -50,6 +61,18 @@ public class SellStorageManager : MonoBehaviour
             StopCoroutine(buildCo);
             buildCo = null;
         }
+
+        topUiDirty = false;
+    }
+
+    private void Update()
+    {
+        // Top UI 디바운스 처리
+        if (topUiDirty && Time.unscaledTime >= nextTopUiTime)
+        {
+            topUiDirty = false;
+            RefreshTopUI_Immediate();
+        }
     }
 
     private IEnumerator BindSaveManagerRoutine()
@@ -62,7 +85,7 @@ public class SellStorageManager : MonoBehaviour
         sm.OnResourceChanged -= HandleResourceChanged;
         sm.OnResourceChanged += HandleResourceChanged;
 
-        RefreshTopUI();
+        RequestTopUiRefresh(); // ? 바로 갱신 대신 예약
 
         bindCo = null;
     }
@@ -76,7 +99,14 @@ public class SellStorageManager : MonoBehaviour
 
     private void HandleResourceChanged()
     {
-        RefreshTopUI();
+        // 여기서 즉시 RefreshTopUI() 하지 말기
+        RequestTopUiRefresh();
+    }
+
+    private void RequestTopUiRefresh()
+    {
+        topUiDirty = true;
+        nextTopUiTime = Time.unscaledTime + topUiDebounceSec;
     }
 
     private IEnumerator BuildWhenReady()
@@ -117,8 +147,7 @@ public class SellStorageManager : MonoBehaviour
         {
             var obj = Instantiate(slotPrefab, content);
 
-            SupplySellSlot slot;
-            if (!obj.TryGetComponent(out slot))
+            if (!obj.TryGetComponent(out SupplySellSlot slot))
             {
                 Debug.LogError("[SellStorageManager] slotPrefab에 SupplySellSlot 컴포넌트가 없습니다.");
                 Destroy(obj);
@@ -138,10 +167,12 @@ public class SellStorageManager : MonoBehaviour
                 slots[i].Refresh();
         }
 
-        RefreshTopUI();
+        // ? 슬롯 리프레시 후 Top UI는 예약
+        RequestTopUiRefresh();
     }
 
-    private void RefreshTopUI()
+    // 실제 텍스트 갱신은 여기서만
+    private void RefreshTopUI_Immediate()
     {
         var sm = SaveManager.Instance;
         if (sm == null) return;
@@ -156,10 +187,19 @@ public class SellStorageManager : MonoBehaviour
         if (max > 0)
             percent = Mathf.Clamp(Mathf.RoundToInt((float)total / (float)max * 100f), 0, 100);
 
-        if (currentAmountText != null)
-            currentAmountText.text = NumberFormatter.FormatKorean(total) + "개";
+        // 같은 값이면 TMP 갱신 스킵(리빌드 방지)
+        if (total != lastTotal)
+        {
+            lastTotal = total;
+            if (currentAmountText != null)
+                currentAmountText.text = NumberFormatter.FormatKorean(total) + "개";
+        }
 
-        if (percentText != null)
-            percentText.text = "(" + percent + "%)";
+        if (percent != lastPercent)
+        {
+            lastPercent = percent;
+            if (percentText != null)
+                percentText.text = "(" + percent + "%)";
+        }
     }
 }

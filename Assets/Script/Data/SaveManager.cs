@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using UnityEngine;
+using System.Collections;
 
 [Serializable]
 public class SaveData
@@ -42,6 +43,8 @@ public class SaveData
 
         public long boostEndUnixMs = 0;
         public long cooldownEndUnixMs = 0;
+
+        public float baseSpeedBeforeBoost = 0;
     }
 
     // 광물(자원) 30개 보유량: 인덱스 = 자원 id (0~29)
@@ -65,6 +68,16 @@ public class SaveManager : MonoBehaviour
 
     public const long GOLD_MAX = 9_000_000_000_000_000_000;
 
+    [Header("Optimization - Save")]
+    [SerializeField] private float saveDebounceSec = 0.5f; // Save() 연타 합치기
+    [SerializeField] private bool prettyPrint = false;     // 모바일 기본 false 권장
+    [SerializeField] private bool saveOnPauseQuit = true;  // 백그라운드/종료 시 강제 저장
+
+    private Coroutine saveCo;
+    private bool saveDirty;
+    private bool isQuitting;
+    private bool saveInProgress;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -83,9 +96,13 @@ public class SaveManager : MonoBehaviour
     {
         Data = new SaveData();
         Fixup();
-        Save();
+        Save(); // 즉시 저장 요청(실제 디스크 저장은 debounce)
     }
 
+    /// <summary>
+    /// 기존 코드 호환: 어디서든 Save() 호출 가능
+    /// - 즉시 File.WriteAllText 하지 않고 debounce로 합쳐서 저장
+    /// </summary>
     public void Save()
     {
         if (Data == null)
@@ -93,14 +110,78 @@ public class SaveManager : MonoBehaviour
 
         Fixup();
 
+        saveDirty = true;
+
+        if (!gameObject.activeInHierarchy) return;
+
+        // 종료 중이면 그냥 즉시 저장
+        if (isQuitting)
+        {
+            ForceSaveNow();
+            return;
+        }
+
+        if (saveCo == null)
+            saveCo = StartCoroutine(SaveRoutine());
+    }
+
+    private IEnumerator SaveRoutine()
+    {
+        float t = 0f;
+        while (t < saveDebounceSec)
+        {
+            t += Time.unscaledDeltaTime;
+            yield return null;
+        }
+
+        if (!saveDirty)
+        {
+            saveCo = null;
+            yield break;
+        }
+
+        // 저장 시작 표시
+        saveInProgress = true;
+
+        // dirty는 여기서 내리되, pause/quit에서 inProgress로 커버
+        saveDirty = false;
+
+        // 프레임 양보
+        yield return null;
+
         try
         {
-            string json = JsonUtility.ToJson(Data, true);
+            string json = JsonUtility.ToJson(Data, prettyPrint);
             File.WriteAllText(SavePath, json);
         }
         catch (Exception e)
         {
-            Debug.LogError("[SaveManager] Save 실패: " + e.Message);
+            Debug.LogWarning("[SaveManager] Save 실패: " + e.Message);
+            // 실패 시 다시 저장 예약되도록 dirty 복구하는 것도 안전
+            saveDirty = true;
+        }
+
+        saveInProgress = false;
+        saveCo = null;
+
+        if (saveDirty && !isQuitting)
+            saveCo = StartCoroutine(SaveRoutine());
+    }
+
+    private void ForceSaveNow()
+    {
+        if (Data == null) Data = new SaveData();
+        Fixup();
+
+        try
+        {
+            string json = JsonUtility.ToJson(Data, prettyPrint);
+            File.WriteAllText(SavePath, json);
+        }
+        catch { }
+        finally
+        {
+            saveDirty = false;
         }
     }
 
@@ -108,7 +189,9 @@ public class SaveManager : MonoBehaviour
     {
         if (!File.Exists(SavePath))
         {
-            NewGame();
+            Data = new SaveData();
+            Fixup();
+            ForceSaveNow(); // 최초 1회는 바로 생성
             return;
         }
 
@@ -134,11 +217,9 @@ public class SaveManager : MonoBehaviour
         if (Data.blackHole == null) Data.blackHole = new SaveData.BlackHole();
         if (Data.boost == null) Data.boost = new SaveData.Boost();
 
-        // 부스트 값 보정
         if (Data.boost.boostCoolTime <= 0f)
             Data.boost.boostCoolTime = 60f;
 
-        // 지속시간은 쿨타임보다 작게 유지하고 싶으면 여기서 규칙을 고정
         if (Data.boost.boostTime > 45f)
             Data.boost.boostTime = 45f;
 
@@ -151,7 +232,6 @@ public class SaveManager : MonoBehaviour
         if (Data.boost.boostTimePrice <= 0)
             Data.boost.boostTimePrice = 500;
 
-        // resources 배열 길이 보정
         if (Data.resources == null || Data.resources.Length != 30)
         {
             int[] newArr = new int[30];
@@ -185,9 +265,10 @@ public class SaveManager : MonoBehaviour
         }
 
         // save.json은 즉시 다시 생성
-        NewGame();
+        Data = new SaveData();
+        Fixup();
+        ForceSaveNow();
 
-        // 삭제된 파일 기준으로 즉시 초기화 로드
         CharacterManager.Instance?.Reload();
         MissionDataManager.Instance?.Reload();
 
@@ -219,14 +300,13 @@ public class SaveManager : MonoBehaviour
         }
         else
         {
-            // 음수 입력도 방어(필요 없으면 제거 가능)
             long dec = -amount;
             next = (dec >= cur) ? 0 : (cur - dec);
         }
 
         Data.player.gold = next;
 
-        Save();
+        Save(); // 호출은 그대로, 실제 디스크 저장은 합쳐짐
         OnGoldChanged?.Invoke();
         MissionProgressManager.Instance?.SetValue("gold", GetGold());
     }
@@ -412,5 +492,27 @@ public class SaveManager : MonoBehaviour
     public bool IsStorageFull()
     {
         return GetStorageUsed() >= GetStorageMax();
+    }
+
+    private void OnApplicationPause(bool pause)
+    {
+        if (!saveOnPauseQuit) return;
+
+        if (pause)
+        {
+            // saveDirty가 false여도 코루틴이 돌고 있으면 저장 누락 가능
+            if (saveDirty || saveInProgress || saveCo != null)
+                ForceSaveNow();
+        }
+    }
+
+    private void OnApplicationQuit()
+    {
+        isQuitting = true;
+
+        if (!saveOnPauseQuit) return;
+
+        if (saveDirty || saveInProgress || saveCo != null)
+            ForceSaveNow();
     }
 }

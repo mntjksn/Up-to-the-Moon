@@ -31,36 +31,47 @@ public class BoostManager : MonoBehaviour
 
     private const float TIME_CAP = 30f;
 
+    // UI 캐시(같은 값이면 갱신 스킵)
+    private bool lastUnlocked;
+    private long lastGold;
+    private long lastSpeedPrice;
+    private long lastTimePrice;
+    private float lastBoostSpeed;
+    private float lastBoostTime;
+
+    private bool listenersBound = false;
+
+    private void Awake()
+    {
+        BindButtonsOnce();
+    }
+
     private void OnEnable()
     {
-        BindButtons(true);
+        ForceRefresh();
+    }
+
+    private void BindButtonsOnce()
+    {
+        if (listenersBound) return;
+        listenersBound = true;
+
+        if (buyButton != null) buyButton.onClick.AddListener(BuyBoostUnlock);
+        if (speedUpButton != null) speedUpButton.onClick.AddListener(UpgradeSpeed);
+        if (timeUpButton != null) timeUpButton.onClick.AddListener(UpgradeTime);
+    }
+
+    private void ForceRefresh()
+    {
+        // 캐시 무효화
+        lastUnlocked = !lastUnlocked;
+        lastGold = long.MinValue;
+        lastSpeedPrice = long.MinValue;
+        lastTimePrice = long.MinValue;
+        lastBoostSpeed = float.NaN;
+        lastBoostTime = float.NaN;
+
         RefreshFromSave();
-    }
-
-    private void OnDisable()
-    {
-        BindButtons(false);
-    }
-
-    private void BindButtons(bool bind)
-    {
-        if (buyButton != null)
-        {
-            if (bind) buyButton.onClick.AddListener(BuyBoostUnlock);
-            else buyButton.onClick.RemoveListener(BuyBoostUnlock);
-        }
-
-        if (speedUpButton != null)
-        {
-            if (bind) speedUpButton.onClick.AddListener(UpgradeSpeed);
-            else speedUpButton.onClick.RemoveListener(UpgradeSpeed);
-        }
-
-        if (timeUpButton != null)
-        {
-            if (bind) timeUpButton.onClick.AddListener(UpgradeTime);
-            else timeUpButton.onClick.RemoveListener(UpgradeTime);
-        }
     }
 
     private void RefreshFromSave()
@@ -68,46 +79,65 @@ public class BoostManager : MonoBehaviour
         SaveManager sm = SaveManager.Instance;
         if (sm == null) return;
 
-        SaveData.Boost b;
-        if (!TryGetBoost(sm, out b)) return;
+        if (!TryGetBoost(sm, out var b)) return;
 
         bool unlocked = sm.IsBoostUnlocked();
+        long gold = sm.GetGold();
+        float boostSpeed = sm.GetBoostSpeed();
+        float boostTime = sm.GetBoostTime();
+
+        // 완전 동일하면 스킵
+        if (unlocked == lastUnlocked &&
+            gold == lastGold &&
+            b.boostSpeedPrice == lastSpeedPrice &&
+            b.boostTimePrice == lastTimePrice &&
+            Mathf.Approximately(boostSpeed, lastBoostSpeed) &&
+            Mathf.Approximately(boostTime, lastBoostTime))
+        {
+            return;
+        }
+
         ApplyUI(unlocked);
-        RefreshUpgradeUI(sm, b);
+        RefreshUpgradeUI(unlocked, gold, b.boostSpeedPrice, b.boostTimePrice, boostSpeed, boostTime);
+
+        lastUnlocked = unlocked;
+        lastGold = gold;
+        lastSpeedPrice = b.boostSpeedPrice;
+        lastTimePrice = b.boostTimePrice;
+        lastBoostSpeed = boostSpeed;
+        lastBoostTime = boostTime;
     }
 
     private void ApplyUI(bool unlocked)
     {
-        if (panelBoost_Locked != null) panelBoost_Locked.SetActive(!unlocked);
-        if (panelBoost_Main != null) panelBoost_Main.SetActive(unlocked);
+        if (panelBoost_Locked != null && panelBoost_Locked.activeSelf == unlocked)
+            panelBoost_Locked.SetActive(!unlocked);
 
-        if (buyButton != null) buyButton.interactable = !unlocked;
+        if (panelBoost_Main != null && panelBoost_Main.activeSelf != unlocked)
+            panelBoost_Main.SetActive(unlocked);
     }
 
-    private void RefreshUpgradeUI(SaveManager sm, SaveData.Boost b)
+    private void RefreshUpgradeUI(bool unlocked, long gold, long speedPrice, long timePrice, float boostSpeed, float boostTime)
     {
-        long gold = sm.GetGold();
-        bool unlocked = sm.IsBoostUnlocked();
-
-        bool timeCapReached = sm.GetBoostTime() >= TIME_CAP;
+        bool timeCapReached = boostTime >= TIME_CAP;
 
         if (speedPriceText != null)
-            speedPriceText.text = NumberFormatter.FormatKorean(b.boostSpeedPrice) + "원";
+            speedPriceText.text = NumberFormatter.FormatKorean(speedPrice) + "원";
 
         if (timePriceText != null)
-            timePriceText.text = timeCapReached ? "MAX" : (NumberFormatter.FormatKorean(b.boostTimePrice) + "원");
+            timePriceText.text = timeCapReached ? "MAX" : (NumberFormatter.FormatKorean(timePrice) + "원");
 
         if (speedDescText != null)
-            speedDescText.text = "+25% 증가 (현재: " + sm.GetBoostSpeed().ToString("N0") + "%)";
+            speedDescText.text = $"+25% 증가 (현재: {boostSpeed:N0}%)";
 
         if (timeDescText != null)
-            timeDescText.text = "+25% 증가 (현재: " + sm.GetBoostTime().ToString("0.##") + "초)";
+            timeDescText.text = $"+25% 증가 (현재: {boostTime:0.##}초)";
 
         if (speedUpButton != null)
-            speedUpButton.interactable = unlocked && gold >= b.boostSpeedPrice;
+            speedUpButton.interactable = unlocked && gold >= speedPrice;
 
         if (timeUpButton != null)
-            timeUpButton.interactable = unlocked && !timeCapReached && gold >= b.boostTimePrice;
+            timeUpButton.interactable = unlocked && !timeCapReached && gold >= timePrice;
 
         if (buyButton != null)
             buyButton.interactable = !unlocked && gold >= unlockPrice;
@@ -117,9 +147,7 @@ public class BoostManager : MonoBehaviour
     {
         SaveManager sm = SaveManager.Instance;
         if (sm == null) return;
-
-        SaveData.Boost b;
-        if (!TryGetBoost(sm, out b)) return;
+        if (!TryGetBoost(sm, out var b)) return;
 
         if (sm.IsBoostUnlocked()) return;
         if (sm.GetGold() < unlockPrice) return;
@@ -129,11 +157,10 @@ public class BoostManager : MonoBehaviour
         sm.AddGold(-unlockPrice);
         sm.SetBoostUnlocked(true);
 
-        ApplyUI(true);
-        RefreshUpgradeUI(sm, b);
-
         if (MissionProgressManager.Instance != null)
             MissionProgressManager.Instance.SetUnlocked("boost_unlock", true);
+
+        RefreshFromSave();
     }
 
     private void UpgradeSpeed()
@@ -142,9 +169,7 @@ public class BoostManager : MonoBehaviour
         if (sm == null) return;
         if (!sm.IsBoostUnlocked()) return;
 
-        SaveData.Boost b;
-        if (!TryGetBoost(sm, out b)) return;
-
+        if (!TryGetBoost(sm, out var b)) return;
         if (sm.GetGold() < b.boostSpeedPrice) return;
 
         PlaySfx();
@@ -157,7 +182,7 @@ public class BoostManager : MonoBehaviour
         b.boostSpeedPrice *= 2;
         sm.Save();
 
-        RefreshUpgradeUI(sm, b);
+        RefreshFromSave();
     }
 
     private void UpgradeTime()
@@ -166,15 +191,17 @@ public class BoostManager : MonoBehaviour
         if (sm == null) return;
         if (!sm.IsBoostUnlocked()) return;
 
-        SaveData.Boost b;
-        if (!TryGetBoost(sm, out b)) return;
+        if (!TryGetBoost(sm, out var b)) return;
 
         float cur = sm.GetBoostTime();
         if (cur >= TIME_CAP)
         {
-            sm.SetBoostTime(TIME_CAP);
-            sm.Save();
-            RefreshUpgradeUI(sm, b);
+            if (!Mathf.Approximately(cur, TIME_CAP))
+            {
+                sm.SetBoostTime(TIME_CAP);
+                sm.Save();
+            }
+            RefreshFromSave();
             return;
         }
 
@@ -191,16 +218,13 @@ public class BoostManager : MonoBehaviour
         b.boostTimePrice *= 2;
         sm.Save();
 
-        RefreshUpgradeUI(sm, b);
+        RefreshFromSave();
     }
 
     private bool TryGetBoost(SaveManager sm, out SaveData.Boost boost)
     {
         boost = null;
-        if (sm == null) return false;
-        if (sm.Data == null) return false;
-        if (sm.Data.boost == null) return false;
-
+        if (sm == null || sm.Data == null || sm.Data.boost == null) return false;
         boost = sm.Data.boost;
         return true;
     }

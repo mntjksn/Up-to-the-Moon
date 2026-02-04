@@ -7,6 +7,7 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private SpriteRenderer sr;
 
     private Coroutine bindCo;
+    private bool isBound = false;
 
     private void Awake()
     {
@@ -28,21 +29,34 @@ public class PlayerController : MonoBehaviour
             bindCo = null;
         }
 
+        Unbind();
+    }
+
+    private void Unbind()
+    {
+        if (!isBound) return;
+
         var sm = SaveManager.Instance;
         if (sm != null)
             sm.OnCharacterChanged -= ApplyCharacterSprite;
+
+        isBound = false;
     }
 
     private IEnumerator BindAndApplyRoutine()
     {
+        // SaveManager 준비 대기
         while (SaveManager.Instance == null)
             yield return null;
 
         var sm = SaveManager.Instance;
 
+        // 중복 방지
         sm.OnCharacterChanged -= ApplyCharacterSprite;
         sm.OnCharacterChanged += ApplyCharacterSprite;
+        isBound = true;
 
+        // CharacterManager 준비 대기
         while (CharacterManager.Instance == null || !CharacterManager.Instance.IsLoaded)
             yield return null;
 
@@ -61,12 +75,13 @@ public class PlayerController : MonoBehaviour
         var list = cm.CharacterItem;
         if (list == null) return;
 
-        if (id < 0 || id >= list.Count) return;
+        if ((uint)id >= (uint)list.Count) return;
 
         var it = list[id];
-        if (it == null) return;
-        if (it.itemimg == null) return;
+        if (it == null || it.itemimg == null) return;
 
-        sr.sprite = it.itemimg;
+        // 같은 스프라이트면 재할당 스킵
+        if (sr.sprite != it.itemimg)
+            sr.sprite = it.itemimg;
     }
 }

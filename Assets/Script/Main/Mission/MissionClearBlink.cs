@@ -56,33 +56,19 @@ public class MissionClearBlink : MonoBehaviour
         List<MissionItem> list = mdm.MissionItem;
         if (list == null || list.Count == 0) return false;
 
-        int maxTier = GetMaxUnlockedTier(list);
-
-        for (int i = 0; i < list.Count; i++)
-        {
-            MissionItem m = list[i];
-            if (m == null) continue;
-
-            if (!IsTierAllowed(m.tier, maxTier)) continue;
-
-            if (m.isCompleted && !m.rewardClaimed)
-                return true;
-        }
-
-        return false;
-    }
-
-    private int GetMaxUnlockedTier(List<MissionItem> missions)
-    {
+        // 한 번의 루프로:
+        // - easy/normal 존재 여부 + 전부 보상수령 여부 계산
+        // - tier 허용 범위 결정 후 claimable 탐색까지 처리
         bool hasEasy = false;
         bool easyAllClaimed = true;
 
         bool hasNormal = false;
         bool normalAllClaimed = true;
 
-        for (int i = 0; i < missions.Count; i++)
+        // 1차: easy/normal 상태 파악
+        for (int i = 0; i < list.Count; i++)
         {
-            MissionItem m = missions[i];
+            MissionItem m = list[i];
             if (m == null) continue;
 
             if (m.tier == "easy")
@@ -97,9 +83,24 @@ public class MissionClearBlink : MonoBehaviour
             }
         }
 
-        if (hasEasy && !easyAllClaimed) return 0;
-        if (hasNormal && !normalAllClaimed) return 1;
-        return 2;
+        int maxTier;
+        if (hasEasy && !easyAllClaimed) maxTier = 0;
+        else if (hasNormal && !normalAllClaimed) maxTier = 1;
+        else maxTier = 2;
+
+        // 2차: claimable 탐색
+        for (int i = 0; i < list.Count; i++)
+        {
+            MissionItem m = list[i];
+            if (m == null) continue;
+
+            if (!IsTierAllowed(m.tier, maxTier)) continue;
+
+            if (m.isCompleted && !m.rewardClaimed)
+                return true;
+        }
+
+        return false;
     }
 
     private bool IsTierAllowed(string tier, int maxTier)
@@ -114,7 +115,9 @@ public class MissionClearBlink : MonoBehaviour
     {
         if (clearText == null) return;
 
-        clearText.enabled = true;
+        if (!clearText.enabled)
+            clearText.enabled = true;
+
         SetAlpha(maxAlpha);
 
         if (blinkRoutine == null)
@@ -157,8 +160,7 @@ public class MissionClearBlink : MonoBehaviour
     {
         if (clearText == null) return;
 
-        Color c = clearText.color;
-        c.a = a;
-        clearText.color = c;
+        // TMP는 alpha만 바꾸는 헬퍼가 있음(가독성)
+        clearText.alpha = a;
     }
 }

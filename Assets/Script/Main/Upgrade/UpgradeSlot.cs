@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -36,12 +37,29 @@ public class UpgradeSlot : MonoBehaviour
     private CharacterItem item;
     private Coroutine refreshCo;
 
+    // 캐시
+    private SaveManager sm;
+    private ItemManager im;
+    private UpgradeCostManager ucm;
+
+    private int stepCached = -1;
+    private List<Cost> cachedCosts; // ucm의 내부 리스트 참조 (new 안 함)
+
+    // row 캐시(한 번 만든 UI를 재사용)
+    private readonly List<SupplyCostRowUI> costRows = new List<SupplyCostRowUI>(8);
+
     private void OnEnable()
     {
-        var sm = SaveManager.Instance;
+        sm = SaveManager.Instance;
+        im = ItemManager.Instance;
+        ucm = UpgradeCostManager.Instance;
+
         if (sm != null)
         {
+            sm.OnResourceChanged -= HandleResourceChanged;
             sm.OnResourceChanged += HandleResourceChanged;
+
+            sm.OnGoldChanged -= HandleGoldChanged;
             sm.OnGoldChanged += HandleGoldChanged;
         }
 
@@ -65,7 +83,6 @@ public class UpgradeSlot : MonoBehaviour
 
     private void OnDisable()
     {
-        var sm = SaveManager.Instance;
         if (sm != null)
         {
             sm.OnResourceChanged -= HandleResourceChanged;
@@ -83,7 +100,7 @@ public class UpgradeSlot : MonoBehaviour
     {
         index = idx;
         initialized = true;
-        Refresh();
+        Refresh(); // 최초 1회 전체 갱신
     }
 
     private IEnumerator RefreshWhenReady()
@@ -94,18 +111,21 @@ public class UpgradeSlot : MonoBehaviour
         while (safety-- > 0)
         {
             var cm = CharacterManager.Instance;
-            var im = ItemManager.Instance;
-            var ucm = UpgradeCostManager.Instance;
 
             if (cm != null && cm.IsLoaded &&
-                im != null && im.IsLoaded &&
-                ucm != null && ucm.IsLoaded)
+                ItemManager.Instance != null && ItemManager.Instance.IsLoaded &&
+                UpgradeCostManager.Instance != null && UpgradeCostManager.Instance.IsLoaded)
             {
                 break;
             }
 
             yield return null;
         }
+
+        // 캐시 갱신
+        sm = SaveManager.Instance;
+        im = ItemManager.Instance;
+        ucm = UpgradeCostManager.Instance;
 
         Refresh();
     }
@@ -122,10 +142,17 @@ public class UpgradeSlot : MonoBehaviour
         }
 
         item = cm.CharacterItem[index];
+
+        // 고정 UI(아이콘/텍스트/패널) 반영
         ApplyUI(item);
 
+        // 필요 재료 UI는 “빌드/업데이트 분리”
         if (item != null)
-            RefreshNeedSupplyUI(item.item_num + 1);
+        {
+            int step = item.item_num + 1;
+            EnsureNeedSupplyRows(step);     // row 생성은 필요할 때만
+            UpdateNeedSupplyRowsOnly();     // 수량/스프라이트 갱신
+        }
     }
 
     private void ApplyUI(CharacterItem it)
@@ -158,12 +185,11 @@ public class UpgradeSlot : MonoBehaviour
         if (speedText != null) speedText.text = $"{it.item_speed} Km / s";
         if (priceText != null) priceText.text = $"{NumberFormatter.FormatKorean(it.item_price)}원";
 
-        var sm = SaveManager.Instance;
-
+        // 버튼만 “가볍게” 갱신
         if (unlockButton != null)
         {
-            bool prevOk = CanUnlockByPrevRule();            // 단계 조건
-            bool notYetUnlocked = !it.item_unlock;          // 이미 unlock이면 굳이 누를 필요 없음
+            bool prevOk = CanUnlockByPrevRule();
+            bool notYetUnlocked = !it.item_unlock;
             bool haveGold = (sm != null) && (sm.GetGold() >= it.item_price);
 
             unlockButton.interactable = prevOk && notYetUnlocked && haveGold;
@@ -178,28 +204,21 @@ public class UpgradeSlot : MonoBehaviour
 
     private bool CanUnlockByPrevRule()
     {
-        // 0번은 기본캐릭(무시), 1번은 "처음 시작"이라 조건 없이 열어줌
         if (index <= 1) return true;
 
         var cm = CharacterManager.Instance;
         if (cm == null || !cm.IsLoaded || cm.CharacterItem == null) return false;
 
         int prevIndex = index - 1;
-        if (prevIndex < 0 || prevIndex >= cm.CharacterItem.Count) return false;
+        if ((uint)prevIndex >= (uint)cm.CharacterItem.Count) return false;
 
         var prev = cm.CharacterItem[prevIndex];
-        if (prev == null) return false;
-
-        return prev.item_upgrade; // 이전 캐릭 업그레이드 완료해야 unlock 가능
+        return prev != null && prev.item_upgrade;
     }
 
     private void OnClickUnlock()
     {
-        if (item == null) return;
-
-        var sm = SaveManager.Instance;
-        if (sm == null) return;
-
+        if (item == null || sm == null) return;
         if (sm.GetGold() < item.item_price) return;
 
         if (sfx != null)
@@ -213,15 +232,13 @@ public class UpgradeSlot : MonoBehaviour
         item.item_unlock = true;
         CharacterManager.Instance.SaveToJson();
 
+        // 전체 Refresh는 OK (클릭은 드물어서)
         Refresh();
     }
 
     private void OnClickUpgrade()
     {
-        if (item == null) return;
-
-        var sm = SaveManager.Instance;
-        if (sm == null) return;
+        if (item == null || sm == null) return;
 
         int step = item.item_num + 1;
         if (!CanAffordCosts(step)) return;
@@ -242,13 +259,11 @@ public class UpgradeSlot : MonoBehaviour
         var cm = CharacterManager.Instance;
 
         int nextIndex = index;
-
         if (cm != null && cm.IsLoaded && cm.CharacterItem != null &&
-            nextIndex >= 0 && nextIndex < cm.CharacterItem.Count)
+            (uint)nextIndex < (uint)cm.CharacterItem.Count)
         {
             var next = cm.CharacterItem[nextIndex];
-
-            sm.SetCurrentCharacterId(next.item_num); // 다음 캐릭으로 바꾸기
+            sm.SetCurrentCharacterId(next.item_num);
             sm.SetSpeed(next.item_speed);
         }
         else
@@ -262,42 +277,65 @@ public class UpgradeSlot : MonoBehaviour
         Refresh();
     }
 
-    private void RefreshNeedSupplyUI(int step)
+    // -----------------------------
+    // Need Supply UI 최적화 핵심
+    // -----------------------------
+
+    private void EnsureNeedSupplyRows(int step)
     {
         if (needSupplyParent == null || supplyCostPrefab == null) return;
-
-        var im = ItemManager.Instance;
-        var ucm = UpgradeCostManager.Instance;
-
         if (im == null || !im.IsLoaded) return;
         if (ucm == null || !ucm.IsLoaded) return;
 
-        for (int i = needSupplyParent.childCount - 1; i >= 0; i--)
-            Destroy(needSupplyParent.GetChild(i).gameObject);
-
-        var costs = ucm.GetCostsByStep(step);
-
-        for (int i = 0; i < costs.Count; i++)
+        // step 바뀌면 캐시 갱신
+        if (stepCached != step)
         {
-            var c = costs[i];
+            stepCached = step;
+            cachedCosts = ucm.GetCostsByStep(step); // 내부 리스트 참조
+        }
 
+        int needCount = (cachedCosts != null) ? cachedCosts.Count : 0;
+
+        // 필요한 만큼만 생성, 나머지는 비활성
+        for (int i = costRows.Count; i < needCount; i++)
+        {
             var rowGO = Instantiate(supplyCostPrefab, needSupplyParent);
             var rowUI = rowGO.GetComponent<SupplyCostRowUI>();
+            if (rowUI != null) costRows.Add(rowUI);
+            else Destroy(rowGO);
+        }
+
+        // 활성/비활성만 정리 (Destroy 금지)
+        for (int i = 0; i < costRows.Count; i++)
+        {
+            if (costRows[i] != null)
+                costRows[i].gameObject.SetActive(i < needCount);
+        }
+    }
+
+    private void UpdateNeedSupplyRowsOnly()
+    {
+        if (cachedCosts == null || cachedCosts.Count == 0) return;
+        if (im == null || !im.IsLoaded) return;
+
+        // 실제 표시 업데이트(스프라이트/필요수량)만
+        for (int i = 0; i < cachedCosts.Count; i++)
+        {
+            var c = cachedCosts[i];
+
+            var rowUI = (i < costRows.Count) ? costRows[i] : null;
+            if (rowUI == null) continue;
 
             Sprite spr = null;
             var matItem = im.GetItem(c.itemId);
             if (matItem != null) spr = matItem.itemimg;
 
-            if (rowUI != null)
-                rowUI.Set(spr, c.count);
+            rowUI.Set(spr, c.count);
         }
     }
 
     private bool CanAffordCosts(int step)
     {
-        var sm = SaveManager.Instance;
-        var ucm = UpgradeCostManager.Instance;
-
         if (sm == null) return false;
         if (ucm == null || !ucm.IsLoaded) return false;
 
@@ -307,23 +345,17 @@ public class UpgradeSlot : MonoBehaviour
         for (int i = 0; i < costs.Count; i++)
         {
             var c = costs[i];
-            int have = sm.GetResource(c.itemId);
-            if (have < c.count) return false;
+            if (sm.GetResource(c.itemId) < c.count) return false;
         }
-
         return true;
     }
 
     private void SpendCosts(int step)
     {
-        var sm = SaveManager.Instance;
-        var ucm = UpgradeCostManager.Instance;
-
         if (sm == null) return;
         if (ucm == null || !ucm.IsLoaded) return;
 
         var costs = ucm.GetCostsByStep(step);
-
         for (int i = 0; i < costs.Count; i++)
         {
             var c = costs[i];
@@ -331,6 +363,40 @@ public class UpgradeSlot : MonoBehaviour
         }
     }
 
-    private void HandleResourceChanged() => Refresh();
-    private void HandleGoldChanged() => Refresh();
+    // 이벤트 때는 “전체 Refresh” 대신 가벼운 갱신만
+    private void HandleResourceChanged()
+    {
+        if (!initialized || item == null) return;
+
+        // 버튼 상태 갱신
+        if (upgradeButton != null)
+            upgradeButton.interactable = (sm != null) && CanAffordCosts(item.item_num + 1);
+
+        if (unlockButton != null)
+        {
+            bool prevOk = CanUnlockByPrevRule();
+            bool notYetUnlocked = !item.item_unlock;
+            bool haveGold = (sm != null) && (sm.GetGold() >= item.item_price);
+            unlockButton.interactable = prevOk && notYetUnlocked && haveGold;
+        }
+
+        // 필요재료 UI는 row 재생성 없이 업데이트만
+        UpdateNeedSupplyRowsOnly();
+    }
+
+    private void HandleGoldChanged()
+    {
+        if (!initialized || item == null) return;
+
+        if (unlockButton != null)
+        {
+            bool prevOk = CanUnlockByPrevRule();
+            bool notYetUnlocked = !item.item_unlock;
+            bool haveGold = (sm != null) && (sm.GetGold() >= item.item_price);
+            unlockButton.interactable = prevOk && notYetUnlocked && haveGold;
+        }
+
+        if (upgradeButton != null)
+            upgradeButton.interactable = (sm != null) && CanAffordCosts(item.item_num + 1);
+    }
 }

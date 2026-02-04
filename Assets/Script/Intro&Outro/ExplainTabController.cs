@@ -31,6 +31,8 @@ public class ExplainTabController : MonoBehaviour
     private Button[] buttons;
     private Image[] buttonImages;
 
+    private int currentIndex = -1; // 현재 탭 캐시
+
     private void Awake()
     {
         panels = new GameObject[] { panelDefault, panelArea, panelResource, panelUpgrade };
@@ -47,6 +49,12 @@ public class ExplainTabController : MonoBehaviour
             int index = i;
             b.onClick.AddListener(() => Show((Tab)index));
         }
+
+        // 초기 상태 정리(선택: 씬에서 켜져있을 수 있으니)
+        for (int i = 0; i < panels.Length; i++)
+            if (panels[i] != null) panels[i].SetActive(false);
+
+        SetAllButtons(normalColor);
     }
 
     private void OnEnable()
@@ -56,25 +64,29 @@ public class ExplainTabController : MonoBehaviour
 
     private void Show(Tab tab)
     {
-        SetAllPanels(false);
-        SetAllButtons(normalColor);
-
         int index = (int)tab;
+        if (index < 0 || index >= panels.Length) return;
 
-        if (index >= 0 && index < panels.Length && panels[index] != null)
+        // 같은 탭이면 아무것도 안 함(레이아웃 리빌드 방지)
+        if (currentIndex == index) return;
+
+        // 이전 탭 끄기
+        if (currentIndex >= 0 && currentIndex < panels.Length && panels[currentIndex] != null)
+            panels[currentIndex].SetActive(false);
+
+        // 이전 버튼 색 되돌리기
+        if (currentIndex >= 0 && currentIndex < buttonImages.Length && buttonImages[currentIndex] != null)
+            buttonImages[currentIndex].color = normalColor;
+
+        // 새 탭 켜기
+        if (panels[index] != null)
             panels[index].SetActive(true);
 
-        if (index >= 0 && index < buttonImages.Length && buttonImages[index] != null)
+        // 새 버튼 색
+        if (index < buttonImages.Length && buttonImages[index] != null)
             buttonImages[index].color = selectedColor;
-    }
 
-    private void SetAllPanels(bool active)
-    {
-        for (int i = 0; i < panels.Length; i++)
-        {
-            if (panels[i] != null)
-                panels[i].SetActive(active);
-        }
+        currentIndex = index;
     }
 
     private void SetAllButtons(Color color)
