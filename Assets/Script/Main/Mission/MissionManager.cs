@@ -3,6 +3,33 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
+/*
+    MissionManager
+
+    [역할]
+    - 미션 UI를 "티어(easy/normal/hard) + 카테고리(growth/region/resource/upgrade/play)" 구조로 빌드한다.
+    - MissionProgressManager의 상태 변경 이벤트를 구독하여,
+      미션 진행/완료/보상 수령 변화가 있을 때 화면을 갱신한다.
+    - easy 완료(모두 수령) 시 normal 버튼 해금, normal 완료 시 hard 버튼 해금 로직을 처리한다.
+
+    [설계 의도]
+    1) 빌드 1회 + 갱신만 반복
+       - 미션 패널(슬롯) 구조는 최초 1회 BuildWhenReady()에서 만들고,
+         이후에는 슬롯 Refresh()만 수행한다.
+       - GetComponentsInChildren 같은 비싼 탐색 대신 티어별 슬롯 리스트(easySlots/normalSlots/hardSlots)를 캐싱한다.
+
+    2) 이벤트 폭주 방지(디바운스)
+       - OnMissionStateChanged 이벤트가 짧은 시간에 여러 번 올 수 있으므로,
+         한 프레임에 1번만 처리하도록 DeferredRefresh()로 모아서 갱신한다.
+
+    3) 모바일 성능 대응(프레임 분산)
+       - 슬롯 Refresh가 많아질 경우 한 프레임에 몰아서 하지 않도록
+         refreshPerFrame 단위로 나누어 RefreshVisibleSlotsAsync()로 분산한다.
+
+    [주의/전제]
+    - MissionDataManager가 IsLoaded가 true가 된 이후에만 Build 가능.
+    - 카테고리 노출 순서는 categoryOrder로 고정.
+*/
 public class MissionManager : MonoBehaviour
 {
     public static MissionManager Instance;
@@ -23,18 +50,20 @@ public class MissionManager : MonoBehaviour
     [SerializeField] private Transform contentHard;
 
     [Header("Prefabs")]
-    [SerializeField] private GameObject panelTypePrefab;
-    [SerializeField] private GameObject panelListPrefab;
+    [SerializeField] private GameObject panelTypePrefab; // 카테고리 헤더(PanelTypeUI)
+    [SerializeField] private GameObject panelListPrefab; // 미션 1개 슬롯(MissionSlot)
 
     [Header("Perf")]
-    [SerializeField] private int refreshPerFrame = 20;   // 한번에 너무 많이 Refresh하지 않게 분산(선택)
+    [SerializeField] private int refreshPerFrame = 20;   // 0 이하이면 즉시 갱신
     [SerializeField] private bool debounceRefresh = true;
 
     private Coroutine buildRoutine;
     private bool built = false;
 
+    // 카테고리 표시 순서
     private readonly string[] categoryOrder = { "growth", "region", "resource", "upgrade", "play" };
 
+    // 카테고리 표시명(한글)
     private readonly Dictionary<string, string> categoryTitle = new Dictionary<string, string>
     {
         { "growth", "성장" },
@@ -44,12 +73,12 @@ public class MissionManager : MonoBehaviour
         { "play", "플레이" },
     };
 
-    // 티어별 슬롯 캐시 (GetComponentsInChildren 제거)
+    // 티어별 슬롯 캐시 (UI 탐색 비용 절감)
     private readonly List<MissionSlot> easySlots = new List<MissionSlot>(128);
     private readonly List<MissionSlot> normalSlots = new List<MissionSlot>(128);
     private readonly List<MissionSlot> hardSlots = new List<MissionSlot>(128);
 
-    // 이벤트 폭주 디바운스
+    // 이벤트 폭주 디바운스용
     private bool refreshQueued = false;
     private Coroutine refreshCo;
 
@@ -61,15 +90,18 @@ public class MissionManager : MonoBehaviour
 
     private void OnEnable()
     {
+        // 버튼 바인딩(티어 전환)
         HookButtons();
 
+        // 미션 상태 변경 이벤트 구독
         MissionProgressManager.OnMissionStateChanged -= OnExternalMissionStateChanged;
         MissionProgressManager.OnMissionStateChanged += OnExternalMissionStateChanged;
 
+        // 최초 1회 빌드
         if (!built && buildRoutine == null)
             buildRoutine = StartCoroutine(BuildWhenReady());
         else
-            OnExternalMissionStateChanged();
+            OnExternalMissionStateChanged(); // 이미 빌드되었으면 최신화
     }
 
     private void OnDisable()
@@ -91,6 +123,11 @@ public class MissionManager : MonoBehaviour
         refreshQueued = false;
     }
 
+    /*
+        버튼 리스너 연결
+        - RemoveAllListeners로 중복 실행 방지
+        - 클릭 시 티어 표시 + UI 최신화
+    */
     private void HookButtons()
     {
         if (btnEasy != null)
@@ -112,6 +149,11 @@ public class MissionManager : MonoBehaviour
         }
     }
 
+    /*
+        데이터 로드 대기 후, 미션 UI를 한 번만 "빌드"한다.
+        - 티어별로 (카테고리 헤더 + 미션 슬롯들) 구조 생성
+        - 생성된 슬롯들을 티어별 리스트에 캐싱하여 이후 Refresh 비용 절감
+    */
     private IEnumerator BuildWhenReady()
     {
         if (panelTypePrefab == null || panelListPrefab == null ||
@@ -131,23 +173,30 @@ public class MissionManager : MonoBehaviour
             yield break;
         }
 
-        // 캐시 비우기
+        // 캐시 초기화
         easySlots.Clear();
         normalSlots.Clear();
         hardSlots.Clear();
 
+        // 티어별 빌드
         BuildTier("easy", contentEasy, missions, easySlots);
         BuildTier("normal", contentNormal, missions, normalSlots);
         BuildTier("hard", contentHard, missions, hardSlots);
 
         built = true;
 
+        // 티어 해금 상태 갱신 + 기본 티어 표시
         RefreshTierLockState(missions);
         ShowTier("easy");
 
         buildRoutine = null;
     }
 
+    /*
+        특정 티어 UI 빌드
+        - categoryOrder 순서대로 "해당 티어+카테고리 미션이 존재할 때만" 헤더를 만들고
+          그 아래에 미션 슬롯을 생성한다.
+    */
     private void BuildTier(string tier, Transform tierContent, List<MissionItem> allMissions, List<MissionSlot> slotCache)
     {
         ClearChildren(tierContent);
@@ -157,6 +206,7 @@ public class MissionManager : MonoBehaviour
         {
             string cat = categoryOrder[c];
 
+            // 이 티어/카테고리에 미션이 하나라도 있는지 확인(헤더 생성 여부 결정)
             bool hasAny = false;
             for (int i = 0; i < allMissions.Count; i++)
             {
@@ -171,6 +221,7 @@ public class MissionManager : MonoBehaviour
 
             if (!hasAny) continue;
 
+            // 카테고리 헤더 생성
             GameObject typeObj = Instantiate(panelTypePrefab, tierContent);
             PanelTypeUI typeUI = typeObj.GetComponent<PanelTypeUI>();
 
@@ -184,6 +235,7 @@ public class MissionManager : MonoBehaviour
             if (!categoryTitle.TryGetValue(cat, out string title)) title = cat;
             typeUI.SetTitle(title);
 
+            // 해당 카테고리의 미션 슬롯 생성
             for (int i = 0; i < allMissions.Count; i++)
             {
                 MissionItem m = allMissions[i];
@@ -203,17 +255,23 @@ public class MissionManager : MonoBehaviour
                 }
 
                 slot.Bind(m);
-                slotCache.Add(slot); // 캐시
+                slotCache.Add(slot); // 티어별 캐시에 저장
             }
         }
     }
 
+    /*
+        자식 오브젝트 정리
+        - 빌드 과정에서 기존 UI를 제거하기 위해 사용
+        - (추가 최적화: 풀링으로 전환 가능)
+    */
     private void ClearChildren(Transform t)
     {
         for (int i = t.childCount - 1; i >= 0; i--)
             Destroy(t.GetChild(i).gameObject);
     }
 
+    // 외부 호출용: 티어 해금 상태 갱신
     public void RefreshTierLockState()
     {
         List<MissionItem> missions = (MissionDataManager.Instance != null) ? MissionDataManager.Instance.MissionItem : null;
@@ -222,6 +280,11 @@ public class MissionManager : MonoBehaviour
         RefreshTierLockState(missions);
     }
 
+    /*
+        티어 해금 규칙
+        - easy 전부 보상 수령 => normal 버튼 활성
+        - normal 전부 보상 수령 => hard 버튼 활성
+    */
     private void RefreshTierLockState(List<MissionItem> missions)
     {
         bool easyAllClaimed = IsTierAllClaimed(missions, "easy");
@@ -232,6 +295,7 @@ public class MissionManager : MonoBehaviour
         if (btnHard != null) btnHard.interactable = normalAllClaimed;
     }
 
+    // 해당 티어 미션이 존재하고, 모두 rewardClaimed=true인지 확인
     private bool IsTierAllClaimed(List<MissionItem> missions, string tier)
     {
         bool hasAny = false;
@@ -250,16 +314,25 @@ public class MissionManager : MonoBehaviour
         return hasAny;
     }
 
+    /*
+        티어 전환
+        - ScrollView를 켜고/끄고
+        - 전환 직후 현재 보이는 티어 슬롯만 Refresh하여 최신화
+    */
     private void ShowTier(string tier)
     {
         if (scrollEasy != null) scrollEasy.SetActive(tier == "easy");
         if (scrollNormal != null) scrollNormal.SetActive(tier == "normal");
         if (scrollHard != null) scrollHard.SetActive(tier == "hard");
 
-        // 티어 바꿀 때도 UI 최신화(한 번)
         OnExternalMissionStateChanged();
     }
 
+    /*
+        외부(미션 진행) 변화 이벤트 핸들러
+        - built 이전엔 처리하지 않음
+        - debounceRefresh 옵션이 켜져 있으면 한 프레임에 한 번만 갱신
+    */
     public void OnExternalMissionStateChanged()
     {
         if (!built) return;
@@ -271,7 +344,7 @@ public class MissionManager : MonoBehaviour
             return;
         }
 
-        // 이벤트 폭주 방지: 한 프레임에 한 번만
+        // 이벤트 폭주 방지: 한 프레임 1회만
         if (refreshQueued) return;
         refreshQueued = true;
 
@@ -279,9 +352,9 @@ public class MissionManager : MonoBehaviour
             refreshCo = StartCoroutine(DeferredRefresh());
     }
 
+    // 다음 프레임에 모아서 1번만 처리
     private IEnumerator DeferredRefresh()
     {
-        // 다음 프레임까지 모아서 1번만 처리
         yield return null;
 
         refreshQueued = false;
@@ -292,9 +365,13 @@ public class MissionManager : MonoBehaviour
         refreshCo = null;
     }
 
+    /*
+        현재 보이는 티어 슬롯 Refresh 시작
+        - refreshPerFrame <= 0: 즉시 전체 Refresh
+        - refreshPerFrame > 0 : 코루틴으로 분산 Refresh (모바일 프리즈 완화)
+    */
     private void StartRefreshVisibleSlots()
     {
-        // 분산 Refresh 코루틴 사용(선택)
         if (refreshPerFrame <= 0)
         {
             RefreshVisibleSlotsImmediate();
@@ -337,6 +414,7 @@ public class MissionManager : MonoBehaviour
         }
     }
 
+    // 현재 활성인 티어의 슬롯 리스트 반환
     private List<MissionSlot> GetVisibleSlotList()
     {
         if (scrollEasy != null && scrollEasy.activeSelf) return easySlots;
