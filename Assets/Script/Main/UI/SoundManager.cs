@@ -54,6 +54,17 @@ public class SoundManager : MonoBehaviour
         DontDestroyOnLoad(gameObject);
     }
 
+    private void Update()
+    {
+        if (!bgmOn) return;
+        if (bgmSource == null) return;
+        if (bgmSource.clip == null) return;
+
+        // 켜져 있는데 재생이 멈췄으면 다시 재생
+        if (!bgmSource.isPlaying && !bgmSource.mute)
+            bgmSource.Play();
+    }
+
     private void Start()
     {
         // 시작 시 현재 bgmOn 상태를 AudioSource에 반영

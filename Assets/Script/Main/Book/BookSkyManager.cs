@@ -14,12 +14,15 @@ using UnityEngine;
     1) 데이터 준비 대기
        - BackgroundManager 인스턴스 생성 및 데이터 로딩 완료(IsLoaded)까지 코루틴으로 대기한다.
        - 데이터가 준비되지 않은 상태에서 UI를 생성하려고 하다 발생하는 예외를 방지한다.
+
     2) 프레임 분산 처리
        - 슬롯 생성/초기화(buildPerFrame)와 Refresh(refreshPerFrame)를 여러 프레임에 나누어 수행한다.
        - 슬롯 수가 많을 때 UI 프리즈(멈춤 현상)를 완화한다.
+
     3) 슬롯 재사용(간단 풀링)
        - 기존 Destroy/Instantiate 반복 대신, 비활성화한 슬롯을 pool에 보관하고 재사용한다.
        - 런타임 GC와 Instantiate 비용을 줄인다.
+
     4) 코루틴 생명주기 관리
        - OnEnable에서 빌드 루틴을 시작하고, OnDisable에서 중단하여 중복 실행을 방지한다.
 */
@@ -50,7 +53,11 @@ public class BookSkyManager : MonoBehaviour
 
     private void Awake()
     {
-        // 싱글톤 중복 방지(필요 시 DontDestroyOnLoad를 추가해도 됨)
+        /*
+            싱글톤 중복 방지
+            - 이미 Instance가 있고, 그게 내가 아니면 파괴한다.
+            - 필요하다면 DontDestroyOnLoad를 붙여 씬 간 유지도 가능하다.
+        */
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -62,19 +69,24 @@ public class BookSkyManager : MonoBehaviour
 
     private void OnEnable()
     {
-        // 패널이 열릴 때 빌드를 시작한다(중복 실행 방지)
+        /*
+            패널이 열릴 때 처리
+            1) 빌드 루틴 시작(중복 실행 방지)
+            2) 상단 텍스트는 패널이 켜질 때마다 명시적으로 세팅
+        */
         if (buildRoutine == null)
             buildRoutine = StartCoroutine(BuildWhenReady());
 
-        // 텍스트는 패널이 켜질 때마다 설정하여 상태를 명확히 한다.
         if (titleText != null) titleText.text = "지역 사전";
         if (subText != null) subText.text = "고도에 따라 변화하는 세계의 모습";
     }
 
     private void OnDisable()
     {
-        // 패널이 닫히면 진행 중인 코루틴을 중단한다.
-        // (비활성 상태에서 계속 생성/갱신하면 불필요한 연산이 된다)
+        /*
+            패널이 닫힐 때 처리
+            - 진행 중인 코루틴 중단(비활성 상태에서 불필요한 연산 방지)
+        */
         if (buildRoutine != null)
         {
             StopCoroutine(buildRoutine);
@@ -91,6 +103,7 @@ public class BookSkyManager : MonoBehaviour
     */
     private IEnumerator BuildWhenReady()
     {
+        // 필수 참조 체크
         if (slotPrefab == null || content == null)
         {
             Debug.LogError("[BookSkyManager] slotPrefab 또는 content가 비어있습니다.");
@@ -143,7 +156,7 @@ public class BookSkyManager : MonoBehaviour
         }
         slots.Clear();
 
-        // 2) 필요한 개수만큼 확보
+        // 2) 필요한 개수만큼 확보(프레임 분산)
         int builtThisFrame = 0;
 
         for (int i = 0; i < count; i++)
@@ -154,7 +167,8 @@ public class BookSkyManager : MonoBehaviour
             slot.gameObject.SetActive(true);
             slot.transform.SetParent(content, false);
 
-            // 인덱스를 기반으로 데이터/표시를 연결한다(슬롯 내부에서 BackgroundManager를 참조할 수 있음)
+            // 인덱스를 기반으로 데이터/표시를 연결한다
+            // (슬롯 내부에서 BackgroundManager를 참조할 수 있음)
             slot.Setup(i);
             slots.Add(slot);
 
@@ -179,17 +193,18 @@ public class BookSkyManager : MonoBehaviour
     */
     private BookSkySlot GetOrCreateSlot()
     {
-        // pool에서 하나 꺼내기(null 제거 포함)
-        for (int i = pool.Count - 1; i >= 0; i--)
+        // FIFO: 먼저 들어간 것부터 꺼내기
+        while (pool.Count > 0)
         {
-            var s = pool[i];
-            pool.RemoveAt(i);
+            var s = pool[0];
+            pool.RemoveAt(0);
             if (s != null) return s;
         }
 
-        // 없으면 새로 생성
+        // 풀에 없으면 새로 생성
         GameObject obj = Instantiate(slotPrefab, content);
 
+        // 필수 컴포넌트 확인
         if (!obj.TryGetComponent(out BookSkySlot slot))
         {
             Debug.LogError("[BookSkyManager] slotPrefab에 BookSkySlot이 없습니다.");

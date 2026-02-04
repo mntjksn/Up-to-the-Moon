@@ -9,54 +9,59 @@ using UnityEngine;
     - 서프라이즈 박스 등에서 사용하는 “토스트(아이콘 + 메시지)” UI를 1개만 재사용하여 표시한다.
     - Show(Sprite, message) 또는 ShowByItemNum(itemNum, message)로 호출하면
       토스트 내용을 갱신하고 일정 시간(lifeTime) 후 자동으로 숨긴다.
-    - 아이템 번호(itemNum)로 아이콘을 찾는 경우, ItemManager.SupplyItem을 1회 스캔하여
-      (itemNum -> sprite) 캐시를 구축한 뒤 빠르게 조회한다.
+    - itemNum 기반 아이콘 조회는 ItemManager.SupplyItem을 1회 스캔해
+      (itemNum -> sprite) 캐시를 만든 뒤 빠르게 조회한다.
 
     [설계 의도]
     1) 토스트 1개 재사용(Instantiate 최소화)
-       - EnsureToast()에서 토스트 오브젝트를 1회만 생성하고 이후에는 SetActive로 표시/숨김 처리
-       - 여러 번 Show가 호출돼도 새로 만들지 않아 GC/프레임 드랍을 줄인다.
+       - EnsureToast()에서 토스트 오브젝트를 1회만 생성하고,
+         이후에는 SetActive로 표시/숨김만 수행한다.
+       - 반복 생성/파괴로 인한 GC/프레임 드랍을 줄인다.
 
-    2) 자동 숨김 코루틴 관리
-       - 토스트를 다시 띄우면 기존 hideCo를 중단하고 새로 시작하여
+    2) 자동 숨김 코루틴 관리(타이머 리셋)
+       - 연속 Show 호출 시 기존 hideCo를 중단하고 새로 시작하여
          “마지막으로 띄운 토스트” 기준으로 lifeTime이 적용되게 한다.
        - WaitForSecondsRealtime(waitLife)을 캐싱해 GC를 줄인다.
 
     3) 아이콘 캐싱
-       - ShowByItemNum 호출 시 itemNum으로 스프라이트를 찾기 위해 iconCache를 사용한다.
+       - ShowByItemNum 호출 시 iconCache(itemNum -> sprite)를 사용한다.
        - cacheBuilt=false면 BuildCacheIfPossible()로 1회 빌드 후 다시 조회한다.
-       - 아이템 데이터가 리로드될 수 있으면 InvalidateCache()로 외부에서 무효화 가능하다.
+       - 아이템 데이터가 리로드될 수 있으면 InvalidateCache() 같은 방식으로 무효화 가능(필요 시 추가).
 
     [주의/전제]
     - toastPrefab에는 SurpriseToastUI 컴포넌트가 있어야 한다.
-    - toastParent는 Canvas 하위(또는 UI가 표시될 부모 Transform)여야 한다.
+    - toastParent는 Canvas 하위(또는 UI 표시용 부모 Transform)여야 한다.
     - ItemManager.SupplyItem의 item_num이 유니크하다는 전제다.
-    - lifeTime을 런타임에 변경한다면 waitLife 재생성이 필요하다(코드에 주석으로 안내되어 있음).
+    - lifeTime을 런타임에 변경한다면 waitLife 재생성이 필요하다(코드에 주석으로 안내).
 */
 public class SurpriseToastManager : MonoBehaviour
 {
     public static SurpriseToastManager Instance;
 
-    [SerializeField] private GameObject toastPrefab; // 토스트 프리팹(SurpriseToastUI 포함)
-    [SerializeField] private Transform toastParent;  // 토스트가 붙을 부모(보통 Canvas 하위)
-    [SerializeField] private float lifeTime = 2.5f;  // 표시 유지 시간(초, Realtime)
+    [SerializeField] private GameObject toastPrefab;     // 토스트 프리팹(SurpriseToastUI 포함)
+    [SerializeField] private Transform toastParent;      // 토스트가 붙을 부모(보통 Canvas 하위)
+    [SerializeField] private float lifeTime = 2.5f;      // 표시 유지 시간(Realtime)
+    [SerializeField] private Sprite goldIconSprite;      // 골드 토스트용 아이콘
 
-    private Coroutine hideCo; // 자동 숨김 코루틴 핸들
+    private Coroutine hideCo;                            // 자동 숨김 코루틴 핸들
 
-    // 토스트 1개 재사용
-    private GameObject toastGO;     // 실제 토스트 오브젝트(1개)
-    private SurpriseToastUI toastUI; // 토스트 UI 스크립트 캐시
+    // 토스트 1개 재사용용 캐시
+    private GameObject toastGO;                          // 실제 토스트 오브젝트(1개)
+    private SurpriseToastUI toastUI;                     // 토스트 UI 스크립트 캐시
 
-    // 아이콘 캐시 (itemNum -> sprite)
+    // 아이콘 캐시(itemNum -> sprite)
     private readonly Dictionary<int, Sprite> iconCache = new Dictionary<int, Sprite>(64);
-    private bool cacheBuilt = false; // 캐시 빌드 완료 여부
+    private bool cacheBuilt = false;                     // 캐시 빌드 완료 여부
 
     // Wait 캐시(Realtime 기반으로 timeScale 영향 X, GC 감소)
     private WaitForSecondsRealtime waitLife;
 
     private void Awake()
     {
-        // 싱글톤 중복 방지
+        /*
+            싱글톤 중복 방지
+            - 이미 Instance가 있고 내가 아니면 파괴
+        */
         if (Instance != null && Instance != this)
         {
             Destroy(gameObject);
@@ -70,9 +75,16 @@ public class SurpriseToastManager : MonoBehaviour
 
     private void OnEnable()
     {
-        // (선택) 처음 켜질 때 미리 생성해두면 첫 토스트 출력이 더 부드러움
+        /*
+            (선택) 매니저가 활성화될 때 토스트를 미리 생성해두면
+            첫 토스트 호출 시 Instantiate 스파이크를 줄일 수 있다.
+        */
         EnsureToast();
     }
+
+    // -------------------------
+    // Public API
+    // -------------------------
 
     /*
         외부 API: 스프라이트를 직접 전달해 토스트 표시
@@ -98,8 +110,20 @@ public class SurpriseToastManager : MonoBehaviour
     }
 
     /*
+        외부 API: 골드 토스트(고정 아이콘 사용)
+    */
+    public void ShowGold(string msg)
+    {
+        Show(goldIconSprite, msg);
+    }
+
+    // -------------------------
+    // Toast Build / Show
+    // -------------------------
+
+    /*
         토스트 1회 생성 보장
-        - 아직 toastGO가 없으면 toastPrefab을 toastParent 아래에 1개 생성하고 비활성화
+        - toastGO가 없으면 toastPrefab을 toastParent 아래에 1개 생성하고 비활성화
         - SurpriseToastUI 컴포넌트를 캐싱
     */
     private void EnsureToast()
@@ -115,9 +139,10 @@ public class SurpriseToastManager : MonoBehaviour
 
     /*
         토스트 표시 공통 처리
-        - 기존 자동숨김 코루틴이 있으면 중단(마지막 호출 기준으로 lifeTime 적용)
-        - UI 내용 갱신 후 활성화
-        - AutoHideRoutine 시작
+        1) 기존 자동숨김 코루틴이 있으면 중단(연속 호출 시 타이머 리셋)
+        2) UI 내용 갱신
+        3) 토스트 활성화
+        4) AutoHideRoutine 시작
     */
     private void SpawnAndSet(Sprite iconSprite, string message)
     {
@@ -137,7 +162,7 @@ public class SurpriseToastManager : MonoBehaviour
         // 보여주기
         toastGO.SetActive(true);
 
-        // lifeTime이 런타임에 바뀔 수 있으면 여기서 wait 재생성 필요
+        // lifeTime이 런타임에 변경될 수 있다면 여기서 waitLife 재생성 필요
         // waitLife = new WaitForSecondsRealtime(lifeTime);
 
         // 자동 숨김 시작
@@ -158,6 +183,10 @@ public class SurpriseToastManager : MonoBehaviour
         hideCo = null;
     }
 
+    // -------------------------
+    // Icon Cache
+    // -------------------------
+
     /*
         itemNum으로 아이콘 스프라이트 찾기(캐시 사용)
         1) iconCache에 있으면 즉시 반환
@@ -166,15 +195,15 @@ public class SurpriseToastManager : MonoBehaviour
     */
     private Sprite FindSpriteByItemNumCached(int itemNum)
     {
-        // 이미 캐시 있으면 즉시 반환
+        // 캐시에 있으면 즉시 반환
         if (iconCache.TryGetValue(itemNum, out var spr))
             return spr;
 
-        // 캐시 아직 안 만들었으면 1회 빌드 시도
+        // 캐시를 아직 안 만들었다면 1회 빌드 시도
         if (!cacheBuilt)
             BuildCacheIfPossible();
 
-        // 다시 시도
+        // 다시 조회
         if (iconCache.TryGetValue(itemNum, out spr))
             return spr;
 
@@ -184,7 +213,7 @@ public class SurpriseToastManager : MonoBehaviour
     /*
         아이콘 캐시 빌드(가능할 때만)
         - ItemManager가 로드 완료 상태일 때
-        - SupplyItem 리스트를 스캔하며 (item_num -> itemimg) 매핑을 만든다
+        - SupplyItem 리스트를 스캔하며 (item_num -> itemimg) 매핑 생성
         - item_num이 유니크하다는 전제
     */
     private void BuildCacheIfPossible()
@@ -202,7 +231,6 @@ public class SurpriseToastManager : MonoBehaviour
             var it = list[i];
             if (it == null) continue;
 
-            // item_num이 유니크하다는 전제
             iconCache[it.item_num] = it.itemimg;
         }
 
