@@ -145,8 +145,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 48cd90e652b3ad14ca3327eacd135ade, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  minPercent: 0.05
-  maxPercent: 0.15
+  minPercent: 0
+  maxPercent: 0.05
   popUpScale: 1.3
   popUpTime: 0.08
   shrinkTime: 0.18

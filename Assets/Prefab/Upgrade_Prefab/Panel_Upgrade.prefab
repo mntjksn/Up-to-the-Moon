@@ -1132,6 +1132,7 @@ MonoBehaviour:
   upgradeButton: {fileID: 3301859530969448159}
   needSupplyParent: {fileID: 4002261229886652460}
   supplyCostPrefab: {fileID: 8067487793558529453, guid: c73aff2b83654644aa876ca833bcc748, type: 3}
+  liveNeedSupplyUI: {fileID: 0}
   sfx: {fileID: 3429114205201899067}
 --- !u!82 &3429114205201899067
 AudioSource:

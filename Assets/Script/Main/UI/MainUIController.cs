@@ -56,7 +56,7 @@ public class MainUIController : MonoBehaviour
             SaveManager.Instance.SetSpeed(initSpeed);
 
         RefreshStaticUIOnce();
-        RefreshDynamicUI(); // 시작 프레임에 바로 표시
+        RefreshDynamicUI(currentSpeed); // 시작 프레임에 바로 표시
     }
 
     private void Update()
@@ -73,9 +73,7 @@ public class MainUIController : MonoBehaviour
         // 이동 거리 누적
         sm.AddKm(currentSpeed * Time.deltaTime);
 
-        float km = sm.GetKm();
-
-        RefreshDynamicUI();
+        RefreshDynamicUI(currentSpeed);   // currentSpeed 전달
         RefreshBoostUI();
     }
 
@@ -88,7 +86,7 @@ public class MainUIController : MonoBehaviour
             storagemaxText.text = $"최대 적재량 : {NumberFormatter.FormatKorean(sm.GetStorageMax())}개";
     }
 
-    private void RefreshDynamicUI()
+    private void RefreshDynamicUI(float displaySpeed)
     {
         var sm = SaveManager.Instance;
         if (sm == null || sm.Data == null) return;
@@ -114,8 +112,9 @@ public class MainUIController : MonoBehaviour
         if (kmText != null)
             kmText.text = $"현재 고도 : {km:N2} Km";
 
+        // 여기! 실제 speed 값 대신 보간된 displaySpeed로 표시
         if (speedText != null)
-            speedText.text = $"현재 속도 : {sm.GetSpeed():N2} Km / s";
+            speedText.text = $"현재 속도 : {displaySpeed:N2} Km / s";
 
         if (incomeText != null)
             incomeText.text = $"현재 수급 속도 : {sm.GetIncome():N1}개 / s";
@@ -124,11 +123,7 @@ public class MainUIController : MonoBehaviour
             storagemaxText.text = $"최대 적재량 : {NumberFormatter.FormatKorean(maxStorage)}개";
 
         CheckStorageBlink(totalStorage, maxStorage);
-
-        // boost_speed / boost_time는 SaveManager SetBoostSpeed/SetBoostTime에서 이미 미션 반영 중이었지?
-        // 여기서 매프레임 SetValue 하면 불필요해서 제거하는 게 맞음.
     }
-
     private void RefreshBoostUI()
     {
         var sm = SaveManager.Instance;

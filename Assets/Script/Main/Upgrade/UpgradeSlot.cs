@@ -161,13 +161,36 @@ public class UpgradeSlot : MonoBehaviour
         var sm = SaveManager.Instance;
 
         if (unlockButton != null)
-            unlockButton.interactable = (sm != null) && (sm.GetGold() >= it.item_price);
+        {
+            bool prevOk = CanUnlockByPrevRule();            // 단계 조건
+            bool notYetUnlocked = !it.item_unlock;          // 이미 unlock이면 굳이 누를 필요 없음
+            bool haveGold = (sm != null) && (sm.GetGold() >= it.item_price);
+
+            unlockButton.interactable = prevOk && notYetUnlocked && haveGold;
+        }
 
         if (upgradeButton != null)
         {
             int step = it.item_num + 1;
             upgradeButton.interactable = (sm != null) && CanAffordCosts(step);
         }
+    }
+
+    private bool CanUnlockByPrevRule()
+    {
+        // 0번은 기본캐릭(무시), 1번은 "처음 시작"이라 조건 없이 열어줌
+        if (index <= 1) return true;
+
+        var cm = CharacterManager.Instance;
+        if (cm == null || !cm.IsLoaded || cm.CharacterItem == null) return false;
+
+        int prevIndex = index - 1;
+        if (prevIndex < 0 || prevIndex >= cm.CharacterItem.Count) return false;
+
+        var prev = cm.CharacterItem[prevIndex];
+        if (prev == null) return false;
+
+        return prev.item_upgrade; // 이전 캐릭 업그레이드 완료해야 unlock 가능
     }
 
     private void OnClickUnlock()

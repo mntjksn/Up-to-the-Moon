@@ -11,10 +11,17 @@ public class ResourcePickupVFX : MonoBehaviour
     private Transform target;
     private SpriteRenderer sr;
 
+    private Vector3 startScale;
+    private ResourcePickupVFXPool pool;   // 추가
+
     private void Awake()
     {
         sr = GetComponentInChildren<SpriteRenderer>();
+        startScale = transform.localScale;
     }
+
+    // 풀에서 주입
+    public void SetPool(ResourcePickupVFXPool p) => pool = p;
 
     public void Init(Sprite sprite, Transform targetTr)
     {
@@ -23,15 +30,15 @@ public class ResourcePickupVFX : MonoBehaviour
         if (sr != null)
             sr.sprite = sprite;
 
-        if (target == null)
-            Destroy(gameObject);
+        // 재사용할 때 상태 초기화
+        transform.localScale = startScale;
     }
 
     private void Update()
     {
         if (target == null)
         {
-            Destroy(gameObject);
+            ReturnToPool();
             return;
         }
 
@@ -48,9 +55,16 @@ public class ResourcePickupVFX : MonoBehaviour
         );
 
         float s = Mathf.Max(0f, transform.localScale.x - shrinkSpeed * Time.deltaTime);
-        transform.localScale = Vector3.one * s;
+        transform.localScale = new Vector3(s, s, 1f);
 
-        if (s <= killScale)
-            Destroy(gameObject);
+        if (transform.localScale.x <= killScale)
+            ReturnToPool();
+    }
+
+    private void ReturnToPool()
+    {
+        target = null;
+        if (pool != null) pool.Release(this);
+        else Destroy(gameObject); // 혹시 풀 없을 때 안전장치
     }
 }
