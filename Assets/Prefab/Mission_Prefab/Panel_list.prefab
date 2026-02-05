@@ -96,6 +96,11 @@ MonoBehaviour:
   descText: {fileID: 6409450152870905604}
   rewardText: {fileID: 7721388345807142757}
   rewardButton: {fileID: 1833665007778542798}
+  claimedColor: {r: 0.27450982, g: 0.43137255, b: 0.43137255, a: 1}
+  normalColor: {r: 0, g: 0, b: 0, a: 1}
+  canClaimBtnColor: {r: 1, g: 1, b: 1, a: 1}
+  cannotClaimBtnColor: {r: 0.55, g: 0.55, b: 0.55, a: 1}
+  claimedBtnColor: {r: 0.31132078, g: 0.31132078, b: 0.31132078, a: 1}
   sfx: {fileID: 941762021014483630}
 --- !u!82 &941762021014483630
 AudioSource:
@@ -385,7 +390,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 0.49019608}
+  m_Color: {r: 1, g: 1, b: 1, a: 0.39215687}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -766,13 +771,13 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 25
-  m_fontSizeBase: 25
+  m_fontSize: 30
+  m_fontSizeBase: 30
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
   m_fontSizeMax: 72
-  m_fontStyle: 1
+  m_fontStyle: 0
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535

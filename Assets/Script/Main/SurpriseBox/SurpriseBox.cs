@@ -136,38 +136,9 @@ public class SurpriseBox : MonoBehaviour
             sfx.Play();
         }
 
-        // 골드 or 광물 선택
-        bool giveGold = Random.value < goldChance;
-
         // ----------------
-        // 골드 지급
+        // 광물 ID 먼저 선택
         // ----------------
-        if (giveGold)
-        {
-            long maxStorage = sm.GetStorageMax();
-            if (maxStorage <= 0) return;
-
-            float minP = Mathf.Clamp01(minPercent);
-            float maxP = Mathf.Clamp01(maxPercent);
-            if (maxP < minP) { float t = minP; minP = maxP; maxP = t; }
-
-            float percent = Random.Range(minP, maxP);
-            long raw = (long)(maxStorage * percent + 0.5f);
-            int gold = (int)Mathf.Clamp(raw, 1, int.MaxValue);
-
-            sm.AddGold(gold);
-
-            SurpriseToastManager.Instance
-                ?.ShowGold($"+ {NumberFormatter.FormatKorean(gold)}원!");
-
-            MissionProgressManager.Instance?.Add("surprise_box_open_count", 1);
-            return;
-        }
-
-        // ----------------
-        // 광물 지급
-        // ----------------
-
         int id = PickRandomOwnedResourceId(sm.Data.resources);
         if (id < 0)
         {
@@ -175,16 +146,47 @@ public class SurpriseBox : MonoBehaviour
             return;
         }
 
-        long maxStorage2 = sm.GetStorageMax();
-        if (maxStorage2 <= 0) return;
+        // ----------------
+        // 광물 개수 계산 (기존 로직 유지)
+        // ----------------
+        long maxStorage = sm.GetStorageMax();
+        if (maxStorage <= 0) return;
 
-        float minP2 = Mathf.Clamp01(minPercent);
-        float maxP2 = Mathf.Clamp01(maxPercent);
-        if (maxP2 < minP2) { float t = minP2; minP2 = maxP2; maxP2 = t; }
+        float minP = Mathf.Clamp01(minPercent);
+        float maxP = Mathf.Clamp01(maxPercent);
+        if (maxP < minP) { float t = minP; minP = maxP; maxP = t; }
 
-        float percent2 = Random.Range(minP2, maxP2);
-        long rawAmount = (long)(maxStorage2 * percent2 + 0.5f);
+        float percent = Random.Range(minP, maxP);
+        long rawAmount = (long)(maxStorage * percent + 0.5f);
         int amount = (int)Mathf.Clamp(rawAmount, 1, int.MaxValue);
+
+        // ----------------
+        // 골드 or 광물 결정
+        // ----------------
+        bool giveGold = Random.value < goldChance;
+
+        // ========================
+        // 골드 지급 루트
+        // ========================
+        if (giveGold)
+        {
+            int unitPrice = GetGoldValuePerItem(id); // 광물 1개 가격
+
+            long gold = (long)amount * unitPrice;
+            gold = (long)Mathf.Clamp(gold, 1, int.MaxValue);
+
+            sm.AddGold((int)gold);
+
+            SurpriseToastManager.Instance
+                ?.ShowGold($" + {NumberFormatter.FormatKorean(gold)}원!");
+
+            MissionProgressManager.Instance?.Add("surprise_box_open_count", 1);
+            return;
+        }
+
+        // ========================
+        // 광물 지급 루트
+        // ========================
 
         long remain = sm.GetStorageMax() - sm.GetStorageUsed();
         if (remain <= 0)
@@ -210,16 +212,18 @@ public class SurpriseBox : MonoBehaviour
 
         SurpriseToastManager.Instance
             ?.ShowByItemNum(id, "+ " + NumberFormatter.FormatKorean(give) + "개!");
+
+        MissionProgressManager.Instance?.Add("surprise_box_open_count", 1);
     }
 
     // --------------------
     // Utility
     // --------------------
 
-    /*
-        보유 중인 자원 id 중 랜덤 1개 선택
-        - Reservoir Sampling
-    */
+        /*
+            보유 중인 자원 id 중 랜덤 1개 선택
+            - Reservoir Sampling
+        */
     private int PickRandomOwnedResourceId(int[] resources)
     {
         int chosen = -1;
@@ -235,6 +239,17 @@ public class SurpriseBox : MonoBehaviour
         }
 
         return chosen;
+    }
+
+    private int GetGoldValuePerItem(int itemId)
+    {
+        var im = ItemManager.Instance;
+        if (im == null) return 0;
+
+        var item = im.GetItem(itemId);   // 네 프로젝트 구조에 맞게
+        if (item == null) return 0;
+
+        return Mathf.Max(0, item.item_price);
     }
 
     // --------------------

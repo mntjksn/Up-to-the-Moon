@@ -14,7 +14,7 @@
   "boost": {
     "boostSpeed": 25.0,
     "boostTime": 1.0,
-    "boostCoolTime": 60.0,
+    "boostCoolTime": 30.0,
     "boostUnlock": false,
     "boostSpeedPrice": 1000,
     "boostTimePrice": 500,

@@ -301,7 +301,7 @@ public class BlackholeUpgradeUI : MonoBehaviour
     private long GetStorageByLevel(int lv)
     {
         long baseCap = 100;
-        double mult = 2.8;
+        double mult = 2.6;
         double raw = baseCap * System.Math.Pow(mult, lv);
 
         if (raw > long.MaxValue) return long.MaxValue;
@@ -319,7 +319,7 @@ public class BlackholeUpgradeUI : MonoBehaviour
     private long GetStoragePrice(int lv)
     {
         double basePrice = 500;
-        double mult = 5.5;
+        double mult = 4.5;
         double raw = basePrice * System.Math.Pow(mult, lv);
 
         if (raw > long.MaxValue) return long.MaxValue;

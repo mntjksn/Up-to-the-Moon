@@ -37,6 +37,15 @@ public class MissionSlot : MonoBehaviour
     [SerializeField] private TextMeshProUGUI rewardText;
     [SerializeField] private Button rewardButton;
 
+    [Header("Colors")]
+    [SerializeField] private Color claimedColor = Color.red;     // 수령 완료 색
+    [SerializeField] private Color normalColor = Color.black;   // 기본 색
+
+    [Header("Button Colors")]
+    [SerializeField] private Color canClaimBtnColor = Color.white;                 // 수령 가능
+    [SerializeField] private Color cannotClaimBtnColor = new Color(0.55f, 0.55f, 0.55f, 1f); // 수령 불가(어두운 회색)
+    [SerializeField] private Color claimedBtnColor = new Color(0.75f, 0.75f, 0.75f, 1f);     // 수령 완료(중간 회색)
+
     [Header("SFX")]
     [SerializeField] private AudioSource sfx;
 
@@ -115,8 +124,15 @@ public class MissionSlot : MonoBehaviour
     */
     private void ForceStateRefresh()
     {
-        lastRewardClaimed = !lastRewardClaimed;
-        lastCanClaim = !lastCanClaim;
+        if (bound == null) return;
+
+        // 현재 상태와 반대로 만들어서 RefreshStateOnly가 무조건 갱신하게 함
+        lastRewardClaimed = !bound.rewardClaimed;
+        lastCanClaim = !(bound.isCompleted && !bound.rewardClaimed);
+
+        // 보상 금액도 강제 갱신(혹시 값 바뀌는 케이스 대비)
+        lastRewardGold = long.MinValue;
+
         RefreshStateOnly();
     }
 
@@ -138,25 +154,50 @@ public class MissionSlot : MonoBehaviour
             if (rewardClaimed != lastRewardClaimed)
             {
                 if (rewardClaimed)
+                {
                     rewardText.text = "수령 완료";
+                    rewardText.color = claimedColor;   // ★ 빨간색
+                }
                 else
+                {
                     rewardText.text = NumberFormatter.FormatKorean(bound.rewardGold) + "원";
+                    rewardText.color = normalColor;    // ★ 기본색
+                }
 
                 lastRewardClaimed = rewardClaimed;
             }
             else if (!rewardClaimed && bound.rewardGold != lastRewardGold)
             {
-                // (예외 대비) 런타임 중 보상 금액이 바뀌는 경우
                 rewardText.text = NumberFormatter.FormatKorean(bound.rewardGold) + "원";
+                rewardText.color = normalColor;   // 추가
                 lastRewardGold = bound.rewardGold;
             }
         }
 
         // 버튼 interactable 갱신(변경될 때만)
-        if (rewardButton != null && canClaim != lastCanClaim)
+        if (rewardButton != null)
         {
-            rewardButton.interactable = canClaim;
-            lastCanClaim = canClaim;
+            // 클릭 가능 여부
+            if (canClaim != lastCanClaim)
+            {
+                rewardButton.interactable = canClaim;
+                lastCanClaim = canClaim;
+            }
+
+            // ColorTint일 때만 Button.colors가 적용됨
+            // (인스펙터에서 Transition이 Color Tint인지 확인)
+            var colors = rewardButton.colors;
+
+            // 수령 가능(Interactable=true)일 때 보여줄 색
+            colors.normalColor = canClaimBtnColor;
+            colors.highlightedColor = canClaimBtnColor;
+            colors.pressedColor = canClaimBtnColor;
+            colors.selectedColor = canClaimBtnColor;
+
+            // 핵심: interactable=false일 때 보여줄 색을 상태별로 바꿈
+            colors.disabledColor = rewardClaimed ? claimedBtnColor : cannotClaimBtnColor;
+
+            rewardButton.colors = colors;
         }
     }
 
@@ -185,7 +226,7 @@ public class MissionSlot : MonoBehaviour
         bound.rewardClaimed = true;
 
         MissionDataManager mdm = MissionDataManager.Instance;
-        if (mdm != null) mdm.SaveToJson();
+        if (mdm != null) mdm.SaveToJsonImmediate();
 
         // 상태만 갱신(전체 Refresh보다 가벼움)
         RefreshStateOnly();

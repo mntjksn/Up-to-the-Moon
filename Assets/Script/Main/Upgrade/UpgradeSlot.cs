@@ -354,6 +354,9 @@ public class UpgradeSlot : MonoBehaviour
         item.item_upgrade = true;
         item.item_unlock = true;
 
+        // 미션 진행도 반영
+        MissionProgressManager.Instance?.Add("character_upgrade_count", 1);
+
         // 저장
         CharacterManager.Instance.SaveToJson();
 
@@ -373,9 +376,6 @@ public class UpgradeSlot : MonoBehaviour
             sm.SetCurrentCharacterId(item.item_num);
             sm.SetSpeed(item.item_speed);
         }
-
-        // 미션 진행도 반영
-        MissionProgressManager.Instance?.Add("character_upgrade_count", 1);
 
         // 전체 Refresh
         Refresh();

@@ -14,7 +14,7 @@
       "costs": [
         {
           "itemId": 0,
-          "count": 150
+          "count": 100
         },
         {
           "itemId": 1,
@@ -31,11 +31,11 @@
       "costs": [
         {
           "itemId": 3,
-          "count": 500
+          "count": 350
         },
         {
           "itemId": 5,
-          "count": 100
+          "count": 150
         }
       ]
     },
@@ -44,11 +44,11 @@
       "costs": [
         {
           "itemId": 1,
-          "count": 1000
+          "count": 300
         },
         {
           "itemId": 4,
-          "count": 300
+          "count": 100
         },
         {
           "itemId": 6,
@@ -65,7 +65,7 @@
         },
         {
           "itemId": 8,
-          "count": 300
+          "count": 200
         },
         {
           "itemId": 9,
@@ -78,15 +78,15 @@
       "costs": [
         {
           "itemId": 8,
-          "count": 1500
+          "count": 650
         },
         {
           "itemId": 10,
-          "count": 500
+          "count": 300
         },
         {
           "itemId": 13,
-          "count": 100
+          "count": 150
         }
       ]
     },
@@ -95,11 +95,11 @@
       "costs": [
         {
           "itemId": 3,
-          "count": 7000
+          "count": 1000
         },
         {
           "itemId": 11,
-          "count": 500
+          "count": 300
         },
         {
           "itemId": 12,
@@ -112,7 +112,7 @@
       "costs": [
         {
           "itemId": 14,
-          "count": 9500
+          "count": 4000
         }
       ]
     },
@@ -121,15 +121,15 @@
       "costs": [
         {
           "itemId": 8,
-          "count": 5000
+          "count": 3000
         },
         {
           "itemId": 15,
-          "count": 2000
+          "count": 1000
         },
         {
           "itemId": 17,
-          "count": 1000
+          "count": 500
         }
       ]
     },
@@ -138,15 +138,15 @@
       "costs": [
         {
           "itemId": 6,
-          "count": 20000
+          "count": 5000
         },
         {
           "itemId": 16,
-          "count": 500
+          "count": 1000
         },
         {
           "itemId": 18,
-          "count": 100
+          "count": 500
         }
       ]
     },
@@ -155,15 +155,15 @@
       "costs": [
         {
           "itemId": 5,
-          "count": 10000
+          "count": 5000
         },
         {
           "itemId": 19,
-          "count": 2500
+          "count": 500
         },
         {
           "itemId": 20,
-          "count": 100
+          "count": 200
         }
       ]
     },
@@ -172,15 +172,15 @@
       "costs": [
         {
           "itemId": 3,
-          "count": 15000
+          "count": 5000
         },
         {
           "itemId": 22,
-          "count": 4000
+          "count": 2000
         },
         {
           "itemId": 23,
-          "count": 2500
+          "count": 1000
         }
       ]
     },
@@ -189,11 +189,15 @@
       "costs": [
         {
           "itemId": 21,
-          "count": 50000
+          "count": 20000
         },
         {
           "itemId": 24,
           "count": 10000
+        },
+        {
+          "itemId": 25,
+          "count": 1000
         }
       ]
     },
@@ -202,15 +206,15 @@
       "costs": [
         {
           "itemId": 25,
-          "count": 100000
+          "count": 50000
         },
         {
           "itemId": 27,
-          "count": 30000
+          "count": 15000
         },
         {
           "itemId": 28,
-          "count": 6000
+          "count": 5000
         }
       ]
     },
@@ -218,16 +222,16 @@
       "step": 15,
       "costs": [
         {
-          "itemId": 10,
-          "count": 300000
+          "itemId": 5,
+          "count": 100000
         },
         {
-          "itemId": 26,
-          "count": 30000
+          "itemId": 13,
+          "count": 50000
         },
         {
           "itemId": 29,
-          "count": 5000
+          "count": 1000
         }
       ]
     }

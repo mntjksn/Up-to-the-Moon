@@ -52,6 +52,7 @@ public class MissionProgressManager : MonoBehaviour
     private bool dirty = false;        // 저장 필요 여부
 
     private float nextAutoTickTime = 0f; // 다음 auto tick 시간
+    private float lastPlayTickTime = -1f;
 
     // 이벤트 폭주 방지(프레임당 1회)
     private bool notifyQueued = false;
@@ -282,12 +283,19 @@ public class MissionProgressManager : MonoBehaviour
         changedThisTick |= SetValue_NoNotify("player_speed", sm.GetSpeed());
         changedThisTick |= SetValue_NoNotify("distance_km", sm.GetKm());
 
-        // 플레이타임 누적
-        changedThisTick |= AddReachValue_NoNotify("play_time", Time.unscaledDeltaTime);
+        // 플레이타임 누적(실제 경과시간)
+        if (lastPlayTickTime < 0f) lastPlayTickTime = Time.unscaledTime;
+        float dt = Time.unscaledTime - lastPlayTickTime;
+        lastPlayTickTime = Time.unscaledTime;
+
+        // 너무 큰 값(앱 복귀 직후 등) 방지하고 싶으면 클램프(선택)
+        dt = Mathf.Clamp(dt, 0f, 1f);
+
+        changedThisTick |= AddPlayTime_NoNotify("play_time", dt);
 
         var data = sm.Data;
         if (data != null && data.resources != null)
-            changedThisTick |= CheckEachResourceAtLeast_NoNotify(data.resources, 500);
+            changedThisTick |= CheckEachResourceAtLeast_NoNotify(data.resources, 10000);
 
         if (changedThisTick)
         {
@@ -428,5 +436,41 @@ public class MissionProgressManager : MonoBehaviour
         }
 
         return SetMultiReachEachResourceAmount_NoNotify(targetEach, ok);
+    }
+
+    private bool AddPlayTime_NoNotify(string goalKey, double delta)
+    {
+        var list = MissionDataManager.Instance != null ? MissionDataManager.Instance.MissionItem : null;
+        if (list == null) return false;
+
+        bool changedAny = false;
+        string inKey = (goalKey ?? "").Trim();
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            var m = list[i];
+            if (m == null) continue;
+            if (m.rewardClaimed) continue;
+
+            // play_time은 누적형이면 accumulate/count, 너 방식이면 reach_value 둘 다 가능하게
+            if (m.goalType != "reach_value" && m.goalType != "accumulate" && m.goalType != "count")
+                continue;
+
+            if (!string.Equals((m.goalKey ?? "").Trim(), inKey, StringComparison.Ordinal))
+                continue;
+
+            double beforeValue = m.currentValue;
+            bool beforeCompleted = m.isCompleted;
+
+            m.currentValue = Math.Max(0, m.currentValue + delta);
+
+            if (!m.isCompleted && m.currentValue >= m.goalTarget)
+                m.isCompleted = true;
+
+            if (Math.Abs(m.currentValue - beforeValue) > 0.000001 || m.isCompleted != beforeCompleted)
+                changedAny = true;
+        }
+
+        return changedAny;
     }
 }

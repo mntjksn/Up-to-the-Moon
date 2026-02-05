@@ -146,12 +146,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   minPercent: 0
-  maxPercent: 0.05
+  maxPercent: 0.1
   popUpScale: 1.3
   popUpTime: 0.08
   shrinkTime: 0.18
   endScale: 0
   clampToRemain: 1
+  goldChance: 0.25
   sfx: {fileID: 3797792244213234820}
 --- !u!114 &3503075609953437325
 MonoBehaviour:

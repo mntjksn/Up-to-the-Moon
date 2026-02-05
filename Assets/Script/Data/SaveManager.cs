@@ -58,7 +58,7 @@ public class SaveData
         // 부스트 설정 값
         public float boostSpeed = 25f;
         public float boostTime = 1f;
-        public float boostCoolTime = 60f;
+        public float boostCoolTime = 30f;
         public bool boostUnlock = false;
 
         // 업그레이드 가격
