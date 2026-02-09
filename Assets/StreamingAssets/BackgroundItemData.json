@@ -11,56 +11,56 @@
       "name": "성층권",
       "sub": "고요하게 펼쳐진 푸른 경계",
       "item_num": 1,
-      "zoneMinKm": 50,
+      "zoneMinKm": 300,
       "spritePath": "Background/1"
     },
     {
       "name": "경계 지역",
       "sub": "하늘과 우주의 틈",
       "item_num": 2,
-      "zoneMinKm": 300,
+      "zoneMinKm": 800,
       "spritePath": "Background/2"
     },
     {
       "name": "저궤도 진입",
       "sub": "우주로 향하는 첫 관문",
       "item_num": 3,
-      "zoneMinKm": 800,
+      "zoneMinKm": 1500,
       "spritePath": "Background/3"
     },
     {
       "name": "저지구 궤도",
       "sub": "지구를 감싸는 어둠의 띠",
       "item_num": 4,
-      "zoneMinKm": 1500,
+      "zoneMinKm": 5000,
       "spritePath": "Background/4"
     },
     {
       "name": "열폭풍 지대",
       "sub": "타오르는 에너지의 바다",
       "item_num": 5,
-      "zoneMinKm": 5000,
+      "zoneMinKm": 10000,
       "spritePath": "Background/5"
     },
     {
       "name": "에너지 성운지대",
       "sub": "빛과 힘이 소용돌이치는 공간",
       "item_num": 6,
-      "zoneMinKm": 10000,
+      "zoneMinKm": 50000,
       "spritePath": "Background/6"
     },
     {
       "name": "은하 외곽",
       "sub": "끝없는 별빛의 가장자리",
       "item_num": 7,
-      "zoneMinKm": 50000,
+      "zoneMinKm": 100000,
       "spritePath": "Background/7"
     },
     {
       "name": "창조의 지역",
       "sub": "모든 것이 시작되는 곳",
       "item_num": 8,
-      "zoneMinKm": 150000,
+      "zoneMinKm": 200000,
       "spritePath": "Background/8"
     }
   ]

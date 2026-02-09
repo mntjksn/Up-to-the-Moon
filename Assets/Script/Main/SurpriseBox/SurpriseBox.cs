@@ -2,33 +2,26 @@ using System.Collections;
 using UnityEngine;
 
 /*
-    SurpriseBox
+    SurpriseBox (Rebalanced)
 
-    [역할]
-    - 유저가 박스를 클릭(터치)하면 1회만 열리고,
-      보상 지급 후 애니메이션(팝업 → 축소)으로 사라진다.
-    - 보상은 “창고 최대 용량(Storage Max)의 일정 비율(minPercent~maxPercent)” 기준으로 계산한다.
-    - 지급할 자원은 “현재 보유 중인 광물(id) 중 랜덤 1개”를 선택한다.
-    - 창고 공간이 부족하면 clampToRemain 옵션에 따라
-        (1) 남은 공간만큼으로 지급량을 줄이거나
-        (2) 지급 실패 토스트를 띄운다.
+    변경 요약
+    1) 자원 선택 가중치(가격 기반)
+       - 비싼 자원이 덜 나오도록 "로그 기반 역가중치" 사용
+       - weight = 1 / (1 + log10(price+1))^k
 
-    [설계 의도]
-    1) 1회 클릭 보장
-       - opened 플래그로 중복 클릭/중복 지급 방지
+    2) 자원 수량 상한(가격 구간별 cap)
+       - 초반(<=100): 제한 없음(원하면 huge cap로 바꿔도 됨)
+       - 중반(<=100,000): 최대 1000개
+       - 후반(>100,000): 최대 500개
+       - (원문 요구의 1,000,000~10,000,000 구간은 후반에 포함됨)
 
-    2) 가벼운 연출
-       - OpenPopAndDestroy 코루틴으로
-         짧은 팝업(Scale Up) → 축소(Scale Down) 연출 후 제거
+    3) 골드 보상 분리(단가 곱 제거)
+       - "선택된 자원 단가 x 개수" 대신, storageMax 기반으로 골드 계산
+       - hard cap 적용 (기본 1억)
 
-    3) 랜덤 자원 선택 최적화
-       - PickRandomOwnedResourceId는 리스트 생성 없이
-         Reservoir Sampling 방식으로 O(n), 추가 메모리 0
-
-    [주의/전제]
-    - SaveManager.GetStorageMax / GetStorageUsed / AddResource가 정상 동작해야 한다.
-    - resources 배열의 인덱스가 item id(item_num)와 동일하다는 전제.
-    - OnMouseDown 사용 시 Collider 필요.
+    주의
+    - SaveManager / ItemManager / SurpriseToastManager / NumberFormatter / MissionProgressManager 존재 전제
+    - resources 배열 index == item_num(id) 전제
 */
 public class SurpriseBox : MonoBehaviour
 {
@@ -36,22 +29,32 @@ public class SurpriseBox : MonoBehaviour
     // Reward Setting
     // --------------------
 
-    [Header("Reward Percent (of Storage Max)")]
-    [Range(0f, 1f)] public float minPercent = 0.05f; // 최소 비율
-    [Range(0f, 1f)] public float maxPercent = 0.15f; // 최대 비율
+    [Header("Mineral Amount (of Storage Max)")]
+    [Range(0f, 1f)] public float minPercent = 0.03f; // 추천: 0.03 (3%)
+    [Range(0f, 1f)] public float maxPercent = 0.08f; // 추천: 0.08 (8%)
+
+    [Header("Weighted Pick (price-based)")]
+    [SerializeField, Range(0f, 5f)]
+    private float weightK = 1.75f; // 추천: 2 (비싼 자원 더 희귀)
 
     [Header("Open Scale Pop")]
-    [SerializeField] private float popUpScale = 1.15f; // 팝업 시 배율
-    [SerializeField] private float popUpTime = 0.08f;  // 팝업 시간
-    [SerializeField] private float shrinkTime = 0.18f; // 축소 시간
-    [SerializeField] private float endScale = 0f;      // 최종 스케일
+    [SerializeField] private float popUpScale = 1.15f;
+    [SerializeField] private float popUpTime = 0.08f;
+    [SerializeField] private float shrinkTime = 0.18f;
+    [SerializeField] private float endScale = 0f;
 
     [Header("If storage is not enough")]
-    [SerializeField] private bool clampToRemain = true; // 공간 부족 시 줄여서 지급할지
+    [SerializeField] private bool clampToRemain = true;
 
     [Header("Gold Or Mineral")]
     [Range(0f, 1f)]
-    public float goldChance = 0.25f; // 골드가 나올 확률
+    public float goldChance = 0.25f;
+
+    [Header("Gold Reward (separate from item price)")]
+    [SerializeField] private long storageMaxCapForGold = 500_000; // 네 게임 최대 창고
+    [SerializeField] private int goldHardCap = 50_000_000;
+    [SerializeField, Range(1.5f, 4f)] private float goldPower = 2.5f;
+    [SerializeField] private Vector2 goldJitter = new Vector2(0.85f, 1.15f);
 
     [Header("SFX")]
     [SerializeField] private AudioSource sfx;
@@ -60,25 +63,20 @@ public class SurpriseBox : MonoBehaviour
     // Runtime
     // --------------------
 
-    private bool opened = false;     // 중복 클릭 방지
-    private Vector3 baseScale;       // 원래 스케일
+    private bool opened = false;
+    private Vector3 baseScale;
 
     private void Awake()
     {
-        // 초기 스케일 저장
         baseScale = transform.localScale;
     }
 
     private void OnMouseDown()
     {
-        // 이미 열렸으면 무시
         if (opened) return;
         opened = true;
 
-        // 보상 지급
         OpenBox();
-
-        // 연출 시작
         StartCoroutine(OpenPopAndDestroy());
     }
 
@@ -86,9 +84,6 @@ public class SurpriseBox : MonoBehaviour
     // Animation
     // --------------------
 
-    /*
-        팝업 → 축소 연출 후 제거
-    */
     private IEnumerator OpenPopAndDestroy()
     {
         Vector3 popScale = baseScale * popUpScale;
@@ -128,67 +123,36 @@ public class SurpriseBox : MonoBehaviour
         if (sm == null || sm.Data == null || sm.Data.resources == null)
             return;
 
-        // SFX 재생
-        if (sfx != null)
+        TryPlaySfx();
+
+        long maxStorage = sm.GetStorageMax();
+        if (maxStorage <= 0) return;
+
+        // 골드 or 광물 먼저 결정 (골드는 id/단가와 분리)
+        bool giveGold = Random.value < goldChance;
+
+        if (giveGold)
         {
-            var snd = SoundManager.Instance;
-            if (snd != null) sfx.mute = !snd.IsSfxOn();
-            sfx.Play();
+            GiveGold(sm, maxStorage);
+            MissionProgressManager.Instance?.Add("surprise_box_open_count", 1);
+            return;
         }
 
         // ----------------
-        // 광물 ID 먼저 선택
+        // 광물 지급
         // ----------------
-        int id = PickRandomOwnedResourceId(sm.Data.resources);
+        int id = PickWeightedOwnedResourceId_LogPrice(sm.Data.resources, weightK);
         if (id < 0)
         {
             SurpriseToastManager.Instance?.Show(null, "보유 중인 광물이 없습니다!");
             return;
         }
 
-        // ----------------
-        // 광물 개수 계산 (기존 로직 유지)
-        // ----------------
-        long maxStorage = sm.GetStorageMax();
-        if (maxStorage <= 0) return;
+        int amount = CalcMineralAmount(maxStorage);
+        if (amount <= 0) return;
 
-        float minP = Mathf.Clamp01(minPercent);
-        float maxP = Mathf.Clamp01(maxPercent);
-        if (maxP < minP) { float t = minP; minP = maxP; maxP = t; }
-
-        float percent = Random.Range(minP, maxP);
-        long rawAmount = (long)(maxStorage * percent + 0.5f);
-        int amount = (int)Mathf.Clamp(rawAmount, 1, int.MaxValue);
-
-        // ----------------
-        // 골드 or 광물 결정
-        // ----------------
-        bool giveGold = Random.value < goldChance;
-
-        // ========================
-        // 골드 지급 루트
-        // ========================
-        if (giveGold)
-        {
-            int unitPrice = GetGoldValuePerItem(id); // 광물 1개 가격
-
-            long gold = (long)amount * unitPrice;
-            gold = (long)Mathf.Clamp(gold, 1, int.MaxValue);
-
-            sm.AddGold((int)gold);
-
-            SurpriseToastManager.Instance
-                ?.ShowGold($" + {NumberFormatter.FormatKorean(gold)}원!");
-
-            MissionProgressManager.Instance?.Add("surprise_box_open_count", 1);
-            return;
-        }
-
-        // ========================
-        // 광물 지급 루트
-        // ========================
-
-        long remain = sm.GetStorageMax() - sm.GetStorageUsed();
+        // 창고 남은 공간 체크
+        long remain = maxStorage - sm.GetStorageUsed();
         if (remain <= 0)
         {
             SurpriseToastManager.Instance?.Show(null, "창고가 가득 찼습니다!");
@@ -197,7 +161,7 @@ public class SurpriseBox : MonoBehaviour
 
         int give = amount;
 
-        if ((long)amount > remain)
+        if ((long)give > remain)
         {
             if (!clampToRemain)
             {
@@ -208,22 +172,148 @@ public class SurpriseBox : MonoBehaviour
             give = (int)Mathf.Clamp(remain, 1, int.MaxValue);
         }
 
-        sm.AddResource(id, give);
+        // 가격 구간별 수량 cap 적용
+        int maxGive = GetMaxGiveByPrice(id);
+        give = Mathf.Min(give, maxGive);
 
-        SurpriseToastManager.Instance
-            ?.ShowByItemNum(id, "+ " + NumberFormatter.FormatKorean(give) + "개!");
+        if (give <= 0) return;
+
+        // 지급 + 토스트
+        sm.AddResource(id, give);
+        SurpriseToastManager.Instance?.ShowByItemNum(id, "+ " + NumberFormatter.FormatKorean(give) + "개!");
 
         MissionProgressManager.Instance?.Add("surprise_box_open_count", 1);
     }
 
+    private void GiveGold(SaveManager sm, long maxStorage)
+    {
+        long gold = CalcGoldReward(maxStorage);
+
+        if (gold <= 0)
+        {
+            SurpriseToastManager.Instance?.ShowGold(" + 0원");
+            return;
+        }
+
+        // 기존 스타일 유지: 1억 이상이면 1억만 지급 (hard cap)
+        if (gold >= goldHardCap)
+        {
+            SurpriseToastManager.Instance?.ShowGold($" + {NumberFormatter.FormatKorean(goldHardCap)}원!");
+            sm.AddGold(goldHardCap);
+        }
+        else
+        {
+            SurpriseToastManager.Instance?.ShowGold($" + {NumberFormatter.FormatKorean(gold)}원!");
+            sm.AddGold((int)gold);
+        }
+    }
+
     // --------------------
-    // Utility
+    // Calc
     // --------------------
 
-        /*
-            보유 중인 자원 id 중 랜덤 1개 선택
-            - Reservoir Sampling
-        */
+    private int CalcMineralAmount(long maxStorage)
+    {
+        float minP = Mathf.Clamp01(minPercent);
+        float maxP = Mathf.Clamp01(maxPercent);
+        if (maxP < minP) { float t = minP; minP = maxP; maxP = t; }
+
+        float percent = Random.Range(minP, maxP);
+        long rawAmount = (long)(maxStorage * percent + 0.5f);
+
+        // 최소 1개
+        return (int)Mathf.Clamp(rawAmount, 1, int.MaxValue);
+    }
+
+    // 골드 보상: storageMax 기반 (단가 곱 제거)
+    private long CalcGoldReward(long storageMax)
+    {
+        double cap = goldHardCap;
+
+        double r = storageMaxCapForGold <= 0 ? 0.0 : (double)storageMax / storageMaxCapForGold;
+        if (r < 0.0) r = 0.0;
+        if (r > 1.0) r = 1.0;
+
+        double baseGold = cap * System.Math.Pow(r, goldPower);
+
+        double jitter = Random.Range(goldJitter.x, goldJitter.y);
+        long gold = (long)(baseGold * jitter + 0.5);
+
+        if (gold < 1) gold = 1;
+        if (gold > goldHardCap) gold = goldHardCap;
+
+        return gold;
+    }
+
+    // --------------------
+    // Caps (by price range)
+    // --------------------
+    // 요구안:
+    // - 초반(<=100): 제한 없음
+    // - 중반(<=100,000): 1000개
+    // - 후반(>100,000): 500개
+    private int GetMaxGiveByPrice(int itemId)
+    {
+        int price = GetGoldValuePerItem(itemId);
+        if (price <= 0) price = 1;
+
+        if (price <= 1000) return 10000;  // 초반
+        if (price <= 1_000_000) return 1000;      // 중반
+        return 500;                              // 후반
+    }
+
+    // --------------------
+    // Weighted Pick (log price)
+    // --------------------
+    private int PickWeightedOwnedResourceId_LogPrice(int[] resources, float k)
+    {
+        var im = ItemManager.Instance;
+        if (im == null) return PickRandomOwnedResourceId(resources); // fallback
+
+        // k가 0이면 사실상 균등에 가까움
+        if (k < 0.0001f) return PickRandomOwnedResourceId(resources);
+
+        double total = 0.0;
+
+        // 1) 총 가중치 합
+        for (int i = 0; i < resources.Length; i++)
+        {
+            if (resources[i] <= 0) continue;
+
+            int price = GetGoldValuePerItem(i);
+            if (price <= 0) price = 1;
+
+            double v = System.Math.Log10(price + 1.0);
+            double w = 1.0 / System.Math.Pow(1.0 + v, k);
+
+            total += w;
+        }
+
+        if (total <= 0.0) return -1;
+
+        // 2) 룰렛 선택
+        double r = Random.value * total;
+        double acc = 0.0;
+
+        for (int i = 0; i < resources.Length; i++)
+        {
+            if (resources[i] <= 0) continue;
+
+            int price = GetGoldValuePerItem(i);
+            if (price <= 0) price = 1;
+
+            double v = System.Math.Log10(price + 1.0);
+            double w = 1.0 / System.Math.Pow(1.0 + v, k);
+
+            acc += w;
+            if (r <= acc) return i;
+        }
+
+        // 부동소수 오차 대비
+        return -1;
+    }
+
+    // 기존 균등 랜덤(보유 자원 중)
     private int PickRandomOwnedResourceId(int[] resources)
     {
         int chosen = -1;
@@ -246,10 +336,20 @@ public class SurpriseBox : MonoBehaviour
         var im = ItemManager.Instance;
         if (im == null) return 0;
 
-        var item = im.GetItem(itemId);   // 네 프로젝트 구조에 맞게
+        var item = im.GetItem(itemId);
         if (item == null) return 0;
 
         return Mathf.Max(0, item.item_price);
+    }
+
+    private void TryPlaySfx()
+    {
+        if (sfx == null) return;
+
+        var snd = SoundManager.Instance;
+        if (snd != null) sfx.mute = !snd.IsSfxOn();
+
+        sfx.Play();
     }
 
     // --------------------

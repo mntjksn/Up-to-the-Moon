@@ -35,6 +35,8 @@ public class SaveData
 
         // 이동 속도(게임 플레이 핵심 값)
         public float speed = 0.01f;
+
+        public int player_num = 0;
     }
 
     [Serializable]
@@ -458,6 +460,22 @@ public class SaveManager : MonoBehaviour
         OnSpeedChanged?.Invoke(amount);
     }
 
+
+    public int GetPlayerNum()
+    {
+        return (Data != null && Data.player != null) ? Data.player.player_num : 0;
+    }
+
+    public void AddPlayerNum(int delta = 1)
+    {
+        if (Data == null) Data = new SaveData();
+        if (Data.player == null) Data.player = new SaveData.Player();
+
+        Data.player.player_num += delta;
+        MissionProgressManager.Instance?.Add("character_upgrade_count", 1);
+        Save();
+    }
+
     // -----------------------
     // Player - Character
     // -----------------------
@@ -594,6 +612,7 @@ public class SaveManager : MonoBehaviour
         if (Data.blackHole == null) Data.blackHole = new SaveData.BlackHole();
 
         Data.blackHole.blackholeIncomeLv += delta;
+        MissionProgressManager.Instance?.Add("blackhole_income_upgrade_count", delta);
         Save();
     }
 

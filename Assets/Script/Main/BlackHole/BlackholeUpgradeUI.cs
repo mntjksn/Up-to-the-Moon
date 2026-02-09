@@ -180,7 +180,7 @@ public class BlackholeUpgradeUI : MonoBehaviour
         PlaySfx();
 
         // 성공 시에만 미션 카운트 증가
-        MissionProgressManager.Instance?.Add("blackhole_income_upgrade_count", 1);
+        //MissionProgressManager.Instance?.Add("blackhole_income_upgrade_count", 1);
 
         save.AddGold(-price);
         save.AddIncomeLv(1);
@@ -218,7 +218,7 @@ public class BlackholeUpgradeUI : MonoBehaviour
     private long GetIncomePrice(int lv)
     {
         double basePrice = 100;
-        double mult = 2.25;
+        double mult = 2.75;
         double raw = basePrice * System.Math.Pow(mult, lv);
 
         if (raw > long.MaxValue) return long.MaxValue;
@@ -301,7 +301,7 @@ public class BlackholeUpgradeUI : MonoBehaviour
     private long GetStorageByLevel(int lv)
     {
         long baseCap = 100;
-        double mult = 2.6;
+        double mult = 1.565;
         double raw = baseCap * System.Math.Pow(mult, lv);
 
         if (raw > long.MaxValue) return long.MaxValue;
@@ -319,7 +319,7 @@ public class BlackholeUpgradeUI : MonoBehaviour
     private long GetStoragePrice(int lv)
     {
         double basePrice = 500;
-        double mult = 4.5;
+        double mult = 2.5;
         double raw = basePrice * System.Math.Pow(mult, lv);
 
         if (raw > long.MaxValue) return long.MaxValue;

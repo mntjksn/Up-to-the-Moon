@@ -335,6 +335,12 @@ public class UpgradeSlot : MonoBehaviour
     */
     private void OnClickUpgrade()
     {
+        var save = SaveManager.Instance;
+        if (save == null) return;
+
+        int player_num = save.GetPlayerNum();
+        if (player_num >= 14) return;
+
         if (item == null || sm == null) return;
 
         int step = item.item_num + 1;
@@ -355,7 +361,9 @@ public class UpgradeSlot : MonoBehaviour
         item.item_unlock = true;
 
         // 미션 진행도 반영
-        MissionProgressManager.Instance?.Add("character_upgrade_count", 1);
+        //MissionProgressManager.Instance?.Add("character_upgrade_count", 1);
+
+        save.AddPlayerNum(1);
 
         // 저장
         CharacterManager.Instance.SaveToJson();

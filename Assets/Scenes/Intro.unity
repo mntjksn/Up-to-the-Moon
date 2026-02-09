@@ -2444,12 +2444,12 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uB300\uB958\uAD8C : 0 ~ 50 Km\n\uC131\uCE35\uAD8C : 50 ~ 300 Km\n\uACBD\uACC4
-    \uC9C0\uC5ED : 300 ~ 800 Km\n\uC800\uADA4\uB3C4 \uC9C4\uC785 : 800 ~ 1,500 Km\n\uC800\uC9C0\uAD6C
-    \uADA4\uB3C4 : 1,500 ~ 5,000 Km\n\uC5F4\uD3ED\uD48D \uC9C0\uB300 : 5,000 ~ 10,000
-    Km\n\uC5D0\uB108\uC9C0 \uC131\uC6B4\uC9C0\uB300 : 10,000 ~ 50,000 Km\n\uC740\uD558
-    \uC678\uACFD : 50,000 ~ 150,000 Km\n\uCC3D\uC870\uC758 \uC9C0\uC5ED : 150,000
-    ~ Km"
+  m_text: "\uB300\uB958\uAD8C : 0 ~ 300 Km\n\uC131\uCE35\uAD8C : 300 ~ 800 Km\n\uACBD\uACC4
+    \uC9C0\uC5ED : 800 ~ 1,500 Km\n\uC800\uADA4\uB3C4 \uC9C4\uC785 : 1,500 ~ 5,000
+    Km\n\uC800\uC9C0\uAD6C \uADA4\uB3C4 : 5,000 ~ 10,000 Km\n\uC5F4\uD3ED\uD48D \uC9C0\uB300
+    : 10,000 ~ 50,000 Km\n\uC5D0\uB108\uC9C0 \uC131\uC6B4\uC9C0\uB300 : 50,000 ~
+    100,000 Km\n\uC740\uD558 \uC678\uACFD : 100,000 ~ 200,000 Km\n\uCC3D\uC870\uC758
+    \uC9C0\uC5ED : 200,000 ~ Km"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 38897910f0200124ab9a8755f31754e9, type: 2}
   m_sharedMaterial: {fileID: -5546530531585544031, guid: 38897910f0200124ab9a8755f31754e9, type: 2}

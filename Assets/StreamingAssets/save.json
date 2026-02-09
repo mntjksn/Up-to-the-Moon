@@ -3,7 +3,8 @@
     "gold": 0,
     "km": 0,
     "currentCharacterId": 0,
-    "speed": 0.009999999776482582
+    "speed": 0.009999999776482582,
+    "player_num": 0
   },
   "blackHole": {
     "blackholeIncomeLv": 0,

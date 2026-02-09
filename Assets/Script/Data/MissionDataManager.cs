@@ -397,4 +397,14 @@ public class MissionDataManager : MonoBehaviour
             Debug.LogWarning("[MissionDataManager] SaveToJsonImmediate ½ÇÆÐ: " + e.Message);
         }
     }
+
+    private void OnApplicationPause(bool pause)
+    {
+        if (pause) SaveToJsonImmediate();
+    }
+
+    private void OnApplicationQuit()
+    {
+        SaveToJsonImmediate();
+    }
 }

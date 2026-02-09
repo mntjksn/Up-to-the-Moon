@@ -9744,7 +9744,7 @@ MonoBehaviour:
   spawnMinRadius: 0.5
   spawnMaxRadius: 3
   spawnZ: 0
-  weightPower: 0.5
+  weightPower: 1.25
   spawnVfx: 1
   maxVfxPerFrame: 8
   vfxEveryNDrops: 1
@@ -23071,7 +23071,6 @@ GameObject:
   - component: {fileID: 1469607118}
   - component: {fileID: 1469607117}
   - component: {fileID: 1469607116}
-  - component: {fileID: 1469607115}
   m_Layer: 5
   m_Name: Scroll View_Mission_Normal
   m_TagString: Untagged
@@ -23100,18 +23099,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -50}
   m_SizeDelta: {x: -50, y: -500}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1469607115
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1469607113}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c7757b6d8a535b8489cc415503d97661, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &1469607116
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24235,12 +24222,12 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\uB300\uB958\uAD8C : 0 ~ 50 Km\n\uC131\uCE35\uAD8C : 50 ~ 300 Km\n\uACBD\uACC4
-    \uC9C0\uC5ED : 300 ~ 800 Km\n\uC800\uADA4\uB3C4 \uC9C4\uC785 : 800 ~ 1,500 Km\n\uC800\uC9C0\uAD6C
-    \uADA4\uB3C4 : 1,500 ~ 5,000 Km\n\uC5F4\uD3ED\uD48D \uC9C0\uB300 : 5,000 ~ 10,000
-    Km\n\uC5D0\uB108\uC9C0 \uC131\uC6B4\uC9C0\uB300 : 10,000 ~ 50,000 Km\n\uC740\uD558
-    \uC678\uACFD : 50,000 ~ 150,000 Km\n\uCC3D\uC870\uC758 \uC9C0\uC5ED : 150,000
-    ~ Km"
+  m_text: "\uB300\uB958\uAD8C : 0 ~ 300 Km\n\uC131\uCE35\uAD8C : 300 ~ 800 Km\n\uACBD\uACC4
+    \uC9C0\uC5ED : 800 ~ 1,500 Km\n\uC800\uADA4\uB3C4 \uC9C4\uC785 : 1,500 ~ 5,000
+    Km\n\uC800\uC9C0\uAD6C \uADA4\uB3C4 : 5,000 ~ 10,000 Km\n\uC5F4\uD3ED\uD48D \uC9C0\uB300
+    : 10,000 ~ 50,000 Km\n\uC5D0\uB108\uC9C0 \uC131\uC6B4\uC9C0\uB300 : 50,000 ~
+    100,000 Km\n\uC740\uD558 \uC678\uACFD : 100,000 ~ 200,000 Km\n\uCC3D\uC870\uC758
+    \uC9C0\uC5ED : 200,000 ~ Km"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 38897910f0200124ab9a8755f31754e9, type: 2}
   m_sharedMaterial: {fileID: -5546530531585544031, guid: 38897910f0200124ab9a8755f31754e9, type: 2}
@@ -27063,7 +27050,6 @@ GameObject:
   - component: {fileID: 1763532965}
   - component: {fileID: 1763532964}
   - component: {fileID: 1763532963}
-  - component: {fileID: 1763532962}
   m_Layer: 5
   m_Name: Scroll View_Mission_Hard
   m_TagString: Untagged
@@ -27092,18 +27078,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -50}
   m_SizeDelta: {x: -50, y: -500}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1763532962
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1763532960}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c7757b6d8a535b8489cc415503d97661, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &1763532963
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -31645,7 +31619,6 @@ GameObject:
   - component: {fileID: 2121381578}
   - component: {fileID: 2121381577}
   - component: {fileID: 2121381576}
-  - component: {fileID: 2121381575}
   m_Layer: 5
   m_Name: Scroll View_Mission_Easy
   m_TagString: Untagged
@@ -31674,18 +31647,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: -50}
   m_SizeDelta: {x: -50, y: -500}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &2121381575
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2121381572}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c7757b6d8a535b8489cc415503d97661, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &2121381576
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -31895,7 +31856,7 @@ MonoBehaviour:
   storagePriceText: {fileID: 385818353}
   storageBuyButton: {fileID: 207304564}
   maxIncomeLv: 19
-  maxStorageLv: 9
+  maxStorageLv: 19
   sfx: {fileID: 2124968534}
 --- !u!82 &2124968534
 AudioSource:
