@@ -3,6 +3,7 @@
     "gold": 0,
     "km": 0,
     "currentCharacterId": 0,
+    "baseSpeed": 0.009999999776482582,
     "speed": 0.009999999776482582,
     "player_num": 0
   },
@@ -21,7 +22,7 @@
     "boostTimePrice": 500,
     "boostEndUnixMs": 0,
     "cooldownEndUnixMs": 0,
-    "baseSpeedBeforeBoost": 0.0
+    "boostMultiplier": 1.0
   },
   "resources": [
     0,

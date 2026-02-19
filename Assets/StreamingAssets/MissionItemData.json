@@ -37,18 +37,18 @@
       "rewardClaimed": false
     },
     {
-      "id": "GROWTH_EASY_SPEED_3",
+      "id": "GROWTH_EASY_SPEED_4",
       "title": "현재 속도 돌파",
-      "desc": "속도를 3.0 Km/s로 달성해보자 !!",
+      "desc": "속도를 4.0 Km/s로 달성해보자 !!",
 
       "tier": "easy",
       "category": "growth",
 
       "goalType": "reach_value",
       "goalKey": "player_speed",
-      "goalTarget": 3.0,
+      "goalTarget": 4.0,
 
-      "rewardGold": 30000,
+      "rewardGold": 50000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -66,7 +66,7 @@
       "goalKey": "distance_km",
       "goalTarget": 300,
 
-      "rewardGold": 50000,
+      "rewardGold": 100000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -84,7 +84,7 @@
       "goalKey": "distance_km",
       "goalTarget": 800,
 
-      "rewardGold": 100000,
+      "rewardGold": 200000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -102,7 +102,7 @@
       "goalKey": "distance_km",
       "goalTarget": 1500,
 
-      "rewardGold": 200000,
+      "rewardGold": 300000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -156,7 +156,7 @@
       "goalKey": "resource_sell_total",
       "goalTarget": 500,
 
-      "rewardGold": 2500,
+      "rewardGold": 3000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -282,7 +282,7 @@
       "goalKey": "gold",
       "goalTarget": 10000000,
 
-      "rewardGold": 1000000,
+      "rewardGold": 5000000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -300,25 +300,25 @@
       "goalKey": "gold",
       "goalTarget": 50000000,
 
-      "rewardGold": 5000000,
+      "rewardGold": 20000000,
 
       "currentValue": 0,
       "isCompleted": false,
       "rewardClaimed": false
     },
     {
-      "id": "GROWTH_NORMAL_SPEED_35",
+      "id": "GROWTH_NORMAL_SPEED_55",
       "title": "현재 속도 돌파",
-      "desc": "35.0 Km/s로 달성해보자 !!",
+      "desc": "55.0 Km/s로 달성해보자 !!",
 
       "tier": "normal",
       "category": "growth",
 
       "goalType": "reach_value",
       "goalKey": "player_speed",
-      "goalTarget": 35,
+      "goalTarget": 55,
 
-      "rewardGold": 3000000,
+      "rewardGold": 200000000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -336,7 +336,7 @@
       "goalKey": "distance_km",
       "goalTarget": 5000,
 
-      "rewardGold": 5000000,
+      "rewardGold": 10000000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -354,7 +354,7 @@
       "goalKey": "distance_km",
       "goalTarget": 10000,
 
-      "rewardGold": 10000000,
+      "rewardGold": 20000000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -372,7 +372,25 @@
       "goalKey": "distance_km",
       "goalTarget": 50000,
 
-      "rewardGold": 20000000,
+      "rewardGold": 50000000,
+
+      "currentValue": 0,
+      "isCompleted": false,
+      "rewardClaimed": false
+    },
+    {
+      "id": "RESOURCE_NORMAL_COLLECT_5000",
+      "title": "자원 모으기",
+      "desc": "5000개 모아보자 !!",
+
+      "tier": "normal",
+      "category": "resource",
+
+      "goalType": "accumulate",
+      "goalKey": "resource_collect_total",
+      "goalTarget": 5000,
+
+      "rewardGold": 1000000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -389,24 +407,6 @@
       "goalType": "accumulate",
       "goalKey": "resource_collect_total",
       "goalTarget": 10000,
-
-      "rewardGold": 500000,
-
-      "currentValue": 0,
-      "isCompleted": false,
-      "rewardClaimed": false
-    },
-    {
-      "id": "RESOURCE_NORMAL_COLLECT_30000",
-      "title": "자원 모으기",
-      "desc": "3만개 모아보자 !!",
-
-      "tier": "normal",
-      "category": "resource",
-
-      "goalType": "accumulate",
-      "goalKey": "resource_collect_total",
-      "goalTarget": 30000,
 
       "rewardGold": 3000000,
 
@@ -444,7 +444,7 @@
       "goalKey": "boost_speed",
       "goalTarget": 300,
 
-      "rewardGold": 3000000,
+      "rewardGold": 2000000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -469,16 +469,16 @@
       "rewardClaimed": false
     },
     {
-      "id": "UPGRADE_NORMAL_CHARACTER_10",
+      "id": "UPGRADE_NORMAL_CHARACTER_8",
       "title": "캐릭터 업그레이드",
-      "desc": "업그레이드를 10번 해보자 !!",
+      "desc": "업그레이드를 8번 해보자 !!",
 
       "tier": "normal",
       "category": "upgrade",
 
       "goalType": "count",
       "goalKey": "character_upgrade_count",
-      "goalTarget": 10,
+      "goalTarget": 8,
 
       "rewardGold": 100000000,
 
@@ -498,41 +498,41 @@
       "goalKey": "play_time",
       "goalTarget": 7200,
 
-      "rewardGold": 50000000,
+      "rewardGold": 10000000,
 
       "currentValue": 0,
       "isCompleted": false,
       "rewardClaimed": false
     },
     {
-      "id": "PLAY_NORMAL_BOOST_300",
+      "id": "PLAY_NORMAL_BOOST_150",
       "title": "부스터 사용",
-      "desc": "300번 사용해보자 !!",
+      "desc": "150번 사용해보자 !!",
 
       "tier": "normal",
       "category": "play",
 
       "goalType": "count",
       "goalKey": "boost_use_count",
-      "goalTarget": 300,
+      "goalTarget": 150,
 
-      "rewardGold": 2000000,
+      "rewardGold": 5000000,
 
       "currentValue": 0,
       "isCompleted": false,
       "rewardClaimed": false
     },
     {
-      "id": "PLAY_NORMAL_SURPRISEBOX_500",
+      "id": "PLAY_NORMAL_SURPRISEBOX_200",
       "title": "깜짝 상자 획득",
-      "desc": "500번 획득 해보자 !!",
+      "desc": "200번 획득 해보자 !!",
 
       "tier": "normal",
       "category": "play",
 
       "goalType": "count",
       "goalKey": "surprise_box_open_count",
-      "goalTarget": 500,
+      "goalTarget": 200,
 
       "rewardGold": 5000000,
 
@@ -667,16 +667,16 @@
       "rewardClaimed": false
     },
     {
-      "id": "RESOURCE_HARD_COLLECT_80000",
-      "title": "자원 모으기",
-      "desc": "8만개 모아보자 !!",
+      "id": "RESOURCE_HARD_SELL_1000000",
+      "title": "자원 팔기",
+      "desc": "100만개 팔아보자 !!",
 
       "tier": "hard",
       "category": "resource",
 
       "goalType": "accumulate",
-      "goalKey": "resource_collect_total",
-      "goalTarget": 80000,
+      "goalKey": "resource_sell_total",
+      "goalTarget": 1000000,
 
       "rewardGold": 100000000,
 
@@ -685,16 +685,16 @@
       "rewardClaimed": false
     },
     {
-      "id": "RESOURCE_HARD_EACH_1000",
+      "id": "RESOURCE_HARD_EACH_2000",
       "title": "각 자원 모으기",
-      "desc": "각각 1000개 이상 모아보자 !!",
+      "desc": "각각 2000개 이상 모아보자 !!",
 
       "tier": "hard",
       "category": "resource",
 
       "goalType": "multi_reach",
       "goalKey": "each_resource_amount",
-      "goalTarget": 1000,
+      "goalTarget": 2000,
 
       "rewardGold": 5000000000,
 
@@ -714,7 +714,7 @@
       "goalKey": "blackhole_income_upgrade_count",
       "goalTarget": 19,
 
-      "rewardGold": 100000000,
+      "rewardGold": 1000000000,
 
       "currentValue": 0,
       "isCompleted": false,
@@ -793,18 +793,18 @@
       "rewardClaimed": false
     },
     {
-      "id": "PLAY_HARD_SURPRISEBOX_5000",
+      "id": "PLAY_HARD_SURPRISEBOX_1000",
       "title": "깜짝 상자 획득",
-      "desc": "5000번 획득 해보자 !!",
+      "desc": "1000번 획득 해보자 !!",
 
       "tier": "hard",
       "category": "play",
 
       "goalType": "count",
       "goalKey": "surprise_box_open_count",
-      "goalTarget": 5000,
+      "goalTarget": 1000,
 
-      "rewardGold": 500000000,
+      "rewardGold": 1000000000,
 
       "currentValue": 0,
       "isCompleted": false,

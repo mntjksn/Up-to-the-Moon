@@ -257,9 +257,12 @@ public class SurpriseBox : MonoBehaviour
         int price = GetGoldValuePerItem(itemId);
         if (price <= 0) price = 1;
 
-        if (price <= 1000) return 10000;  // 초반
-        if (price <= 1_000_000) return 1000;      // 중반
-        return 500;                              // 후반
+        if (price <= 1200) return 10000;  // 초반
+        if (price <= 100_000) return 5000;      // 중반
+        if (price <= 500_000) return 1000;      // 중반
+        if (price <= 2_000_000) return 500;      // 중반
+        if (price <= 5_000_000) return 100;      // 중반
+        return 50;                              // 후반
     }
 
     // --------------------

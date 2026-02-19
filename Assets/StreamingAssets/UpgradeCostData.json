@@ -111,8 +111,12 @@
       "step": 8,
       "costs": [
         {
-          "itemId": 14,
+          "itemId": 7,
           "count": 1000
+        },
+        {
+          "itemId": 14,
+          "count": 400
         }
       ]
     },
@@ -121,7 +125,7 @@
       "costs": [
         {
           "itemId": 8,
-          "count": 1200
+          "count": 1500
         },
         {
           "itemId": 15,
@@ -142,11 +146,11 @@
         },
         {
           "itemId": 16,
-          "count": 1000
+          "count": 2000
         },
         {
           "itemId": 18,
-          "count": 500
+          "count": 1000
         }
       ]
     },
@@ -172,15 +176,15 @@
       "costs": [
         {
           "itemId": 3,
-          "count": 8000
+          "count": 10000
         },
         {
           "itemId": 22,
-          "count": 500
+          "count": 1000
         },
         {
           "itemId": 23,
-          "count": 100
+          "count": 500
         }
       ]
     },
@@ -206,7 +210,7 @@
       "costs": [
         {
           "itemId": 7,
-          "count": 20000
+          "count": 30000
         },
         {
           "itemId": 27,

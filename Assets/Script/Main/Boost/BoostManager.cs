@@ -296,7 +296,7 @@ public class BoostManager : MonoBehaviour
         sm.SetBoostTime(newTime);
 
         // 다음 업그레이드 가격 증가(성장 곡선)
-        b.boostTimePrice *= 2;
+        b.boostTimePrice *= 4;
         sm.Save();
 
         RefreshFromSave();

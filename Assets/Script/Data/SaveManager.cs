@@ -33,7 +33,10 @@ public class SaveData
         // 현재 선택된 캐릭터
         public int currentCharacterId = 0;
 
-        // 이동 속도(게임 플레이 핵심 값)
+        // 기본 속도(업그레이드/캐릭터로 결정되는 “원본”)
+        public float baseSpeed = 0.01f;
+
+        // 이동 속도(최종 적용 속도 = baseSpeed * boostMultiplier)
         public float speed = 0.01f;
 
         public int player_num = 0;
@@ -72,8 +75,8 @@ public class SaveData
         public long boostEndUnixMs = 0;
         public long cooldownEndUnixMs = 0;
 
-        // 부스트 발동 전 기본 속도(복구에 사용)
-        public float baseSpeedBeforeBoost = 0;
+        // 부스트 배율(1.0 = 기본, 1.xx = 부스트 적용)
+        public float boostMultiplier = 1f;
     }
 
     // 자원 보유량(고정 크기 배열): 인덱스 = 자원 id(0~29)
@@ -326,6 +329,21 @@ public class SaveManager : MonoBehaviour
         if (Data.boost.boostTimePrice <= 0)
             Data.boost.boostTimePrice = 500;
 
+        // 구버전 세이브에는 baseSpeed가 없으니, 기존 speed 값을 baseSpeed로 승격한다.
+        if (Data.player.baseSpeed <= 0f)
+        {
+            // 기존 세이브의 speed를 base로 삼는다(최소 0.01)
+            float fallback = (Data.player.speed > 0f) ? Data.player.speed : 0.01f;
+            Data.player.baseSpeed = fallback;
+        }
+
+        // 부스트 배율 기본값 보정
+        if (Data.boost.boostMultiplier <= 0f)
+            Data.boost.boostMultiplier = 1f;
+
+        // 로드 직후 최종 speed 재계산(세이브 값이 꼬여도 여기서 정리)
+        Data.player.speed = Data.player.baseSpeed * Data.boost.boostMultiplier;
+
         // 자원 배열 길이 보정(구버전 호환)
         if (Data.resources == null || Data.resources.Length != 30)
         {
@@ -454,12 +472,20 @@ public class SaveManager : MonoBehaviour
     {
         if (Data == null) Data = new SaveData();
         if (Data.player == null) Data.player = new SaveData.Player();
+        if (Data.boost == null) Data.boost = new SaveData.Boost();
 
-        Data.player.speed = amount;
-        Save();
-        OnSpeedChanged?.Invoke(amount);
+        // SetSpeed는 이제 "기본 속도(baseSpeed)"를 설정하는 역할
+        Data.player.baseSpeed = Mathf.Max(0f, amount);
+
+        // 최종 속도를 재계산하고, 기존처럼 저장 + 이벤트까지 한 번에 처리
+        RecomputeSpeedAndNotify();
     }
 
+    // 기본 속도(업그레이드/캐릭터 기반)
+    public float GetBaseSpeed()
+    {
+        return (Data != null && Data.player != null) ? Data.player.baseSpeed : 0f;
+    }
 
     public int GetPlayerNum()
     {
@@ -516,6 +542,40 @@ public class SaveManager : MonoBehaviour
         Data.boost.boostUnlock = unlocked;
         Save();
         OnBoostUnlockChanged?.Invoke(unlocked);
+    }
+
+    // 부스트 배율
+    public float GetBoostMultiplier()
+    {
+        return (Data != null && Data.boost != null) ? Data.boost.boostMultiplier : 1f;
+    }
+
+    public void SetBoostMultiplier(float mult)
+    {
+        if (Data == null) Data = new SaveData();
+        if (Data.boost == null) Data.boost = new SaveData.Boost();
+
+        Data.boost.boostMultiplier = Mathf.Max(1f, mult);
+        RecomputeSpeedAndNotify();
+    }
+
+    // 최종 속도 재계산 + 저장 + 이벤트
+    private void RecomputeSpeedAndNotify()
+    {
+        if (Data == null) Data = new SaveData();
+        if (Data.player == null) Data.player = new SaveData.Player();
+        if (Data.boost == null) Data.boost = new SaveData.Boost();
+
+        float baseSpeed = Mathf.Max(0f, Data.player.baseSpeed);
+        float mult = Mathf.Max(1f, Data.boost.boostMultiplier);
+        float finalSpeed = baseSpeed * mult;
+
+        Data.player.speed = finalSpeed;
+
+        Save();
+
+        // 기존 구조 유지: speed가 바뀌면 OnSpeedChanged가 반드시 호출되어야 함
+        OnSpeedChanged?.Invoke(finalSpeed);
     }
 
     public float GetBoostSpeed()

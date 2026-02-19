@@ -25,14 +25,9 @@ using UnityEngine;
 */
 public class BoostController : MonoBehaviour
 {
-    // 디버그 로그 출력 여부
-    [SerializeField] private bool debugLog = false;
-
-    // 부스트 시작 시점의 기본 속도(원복 용도)
-    private float baseSpeedBeforeBoost = 0f;
-
-    // 부스트 적용 후 속도(내가 올린 값인지 비교하는 기준)
-    private float boostedSpeed = 0f;
+    [Header("VFX")]
+    [SerializeField] private ParticleSystem boostVfx;
+    [SerializeField] private bool enableVfxOnBoost = true;
 
     // 현재 실행 중인 부스트 코루틴 핸들
     private Coroutine boostCo;
@@ -47,7 +42,17 @@ public class BoostController : MonoBehaviour
     private void Awake()
     {
         col = GetComponent<Collider2D>();
-        cachedCam = Camera.main; // 없으면 클릭 시점에 다시 획득한다.
+        cachedCam = Camera.main;
+
+        if (boostVfx == null)
+            boostVfx = GetComponentInChildren<ParticleSystem>(true);
+
+        if (boostVfx != null)
+        {
+            // 시작 시 꺼두기
+            boostVfx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            if (boostVfx.gameObject.activeSelf) boostVfx.gameObject.SetActive(false);
+        }
     }
 
     private void Update()
@@ -83,14 +88,11 @@ public class BoostController : MonoBehaviour
         if (now < b.boostEndUnixMs)
         {
             float percent = sm.GetBoostSpeed();
-            float baseSpeed = (b.baseSpeedBeforeBoost > 0f) ? b.baseSpeedBeforeBoost : sm.GetSpeed();
-            float targetBoosted = baseSpeed * (1f + percent / 100f);
+            sm.SetBoostMultiplier(1f + percent / 100f);
+            SetBoostVfx(true);
 
-            sm.SetSpeed(targetBoosted);
-
-            // 남은 시간만큼만 기다렸다가 정상적으로 종료/쿨타임 처리를 수행한다.
             if (boostCo != null) StopCoroutine(boostCo);
-            boostCo = StartCoroutine(ResumeBoostRoutine(targetBoosted, baseSpeed));
+            boostCo = StartCoroutine(ResumeBoostRoutine());
             return;
         }
 
@@ -98,13 +100,10 @@ public class BoostController : MonoBehaviour
         if (b.boostEndUnixMs != 0)
             b.boostEndUnixMs = 0;
 
-        // 저장된 baseSpeedBeforeBoost가 남아있다면 원복이 필요하다고 판단한다.
-        if (b.baseSpeedBeforeBoost > 0f)
-        {
-            sm.SetSpeed(b.baseSpeedBeforeBoost);
-            b.baseSpeedBeforeBoost = 0f;
-            sm.Save();
-        }
+        // 부스트 끝났는데 multiplier가 남아있을 수 있으니 정리
+        if (sm.GetBoostMultiplier() != 1f)
+            sm.SetBoostMultiplier(1f);
+        SetBoostVfx(false);
     }
 
     /*
@@ -114,7 +113,7 @@ public class BoostController : MonoBehaviour
         - 종료 시점에도 다른 시스템이 speed를 바꿨을 수 있으므로
           "내가 올린 boosted 값"일 때만 baseSpeed로 되돌린다.
     */
-    private IEnumerator ResumeBoostRoutine(float boosted, float baseSpeed)
+    private IEnumerator ResumeBoostRoutine()
     {
         SaveManager sm = SaveManager.Instance;
         if (!TryGetBoost(sm, out var b)) { boostCo = null; yield break; }
@@ -122,17 +121,16 @@ public class BoostController : MonoBehaviour
         float remain = Mathf.Max(0f, (b.boostEndUnixMs - NowMs()) / 1000f);
         yield return new WaitForSeconds(remain);
 
-        float current = sm.GetSpeed();
-        if (Mathf.Abs(current - boosted) < 0.0001f)
-            sm.SetSpeed(baseSpeed);
+        // 부스트 종료: multiplier 원복
+        sm.SetBoostMultiplier(1f);
+        SetBoostVfx(false);
 
-        // 종료 후 쿨타임 시작 시각을 기록한다.
+        // 쿨타임 기록
         float cooldown = b.boostCoolTime;
         b.cooldownEndUnixMs = NowMs() + (long)(cooldown * 1000f);
 
         // 부스트 기록 정리
         b.boostEndUnixMs = 0;
-        b.baseSpeedBeforeBoost = 0f;
         sm.Save();
 
         boostCo = null;
@@ -197,15 +195,16 @@ public class BoostController : MonoBehaviour
 
         long now = NowMs();
 
-        // 쿨타임 중이면 발동하지 않는다.
+        // 쿨타임
         if (now < b.cooldownEndUnixMs)
-        {
-            if (debugLog) Debug.Log("[Boost] cooldown");
             return;
-        }
 
-        // 이미 부스트 진행 중이면 무시한다.
+        // 부스트 진행 중
         if (now < b.boostEndUnixMs)
+            return;
+
+        // multiplier 복귀 전이면 재사용 금지 (중복 방지 핵심)
+        if (sm.GetBoostMultiplier() != 1f)
             return;
 
         if (boostCo != null) StopCoroutine(boostCo);
@@ -241,32 +240,23 @@ public class BoostController : MonoBehaviour
         b.boostEndUnixMs = now + (long)(duration * 1000f);
         sm.Save();
 
-        // 원복을 위해 부스트 전 속도를 저장한다.
-        baseSpeedBeforeBoost = sm.GetSpeed();
-        b.baseSpeedBeforeBoost = baseSpeedBeforeBoost;
-
-        // 부스트 적용 속도 계산 후 적용한다.
-        boostedSpeed = baseSpeedBeforeBoost * (1f + percent / 100f);
-        sm.SetSpeed(boostedSpeed);
-
-        if (debugLog) Debug.Log("[Boost] ON " + duration + "s");
+        sm.SetBoostMultiplier(1f + percent / 100f);
+        SetBoostVfx(true);
 
         yield return new WaitForSeconds(duration);
 
-        // 부스트 도중 다른 시스템이 speed를 바꿨으면 덮어쓰지 않는다.
-        float current = sm.GetSpeed();
-        if (Mathf.Abs(current - boostedSpeed) < 0.0001f)
-            sm.SetSpeed(baseSpeedBeforeBoost);
+        // 이미 복원 루틴에서 처리됐으면 중복 OFF 방지
+        if (b.boostEndUnixMs != 0)
+            sm.SetBoostMultiplier(1f);
+        SetBoostVfx(false);
+        b.boostEndUnixMs = 0;
 
         // 쿨타임 종료 시각 기록(앱 재시작 복원용)
         b.cooldownEndUnixMs = NowMs() + (long)(cooldown * 1000f);
 
         // 부스트 상태 정리
         b.boostEndUnixMs = 0;
-        b.baseSpeedBeforeBoost = 0f;
         sm.Save();
-
-        if (debugLog) Debug.Log("[Boost] OFF. Cooldown " + cooldown + "s");
 
         boostCo = null;
     }
@@ -315,5 +305,26 @@ public class BoostController : MonoBehaviour
         if (!TryGetBoost(sm, out var b)) return false;
 
         return NowMs() < b.boostEndUnixMs;
+    }
+
+    private void SetBoostVfx(bool on)
+    {
+        if (!enableVfxOnBoost) return;
+        if (boostVfx == null) return;
+
+        if (on)
+        {
+            if (!boostVfx.gameObject.activeSelf) boostVfx.gameObject.SetActive(true);
+            boostVfx.Play(true);
+        }
+        else
+        {
+            boostVfx.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            // 잔상까지 완전 제거하고 싶으면 StopEmittingAndClear
+            // boostVfx.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+
+            // 완전히 꺼서 비용 줄이기(원하면)
+            boostVfx.gameObject.SetActive(false);
+        }
     }
 }
