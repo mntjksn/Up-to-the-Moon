@@ -7846,7 +7846,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_text: "\uCE90\uB9AD\uD130\uB97C \uD130\uCE58\uD558\uC5EC \uC0AC\uC6A9\n(\uCFE8\uD0C0\uC784
-    1\uBD84)"
+    30\uCD08)"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 38897910f0200124ab9a8755f31754e9, type: 2}
   m_sharedMaterial: {fileID: -5546530531585544031, guid: 38897910f0200124ab9a8755f31754e9, type: 2}
@@ -31856,7 +31856,7 @@ MonoBehaviour:
   storagePriceText: {fileID: 385818353}
   storageBuyButton: {fileID: 207304564}
   maxIncomeLv: 19
-  maxStorageLv: 19
+  maxStorageLv: 9
   sfx: {fileID: 2124968534}
 --- !u!82 &2124968534
 AudioSource:

@@ -291,7 +291,7 @@ public class BoostManager : MonoBehaviour
 
         sm.AddGold(-b.boostTimePrice);
 
-        float next = cur * 1.25f;
+        float next = cur * 1.5f;
         float newTime = Mathf.Min(next, TIME_CAP);
         sm.SetBoostTime(newTime);
 

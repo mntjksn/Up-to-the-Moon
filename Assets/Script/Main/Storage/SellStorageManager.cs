@@ -79,6 +79,11 @@ public class SellStorageManager : MonoBehaviour
 
         if (buildCo == null)
             buildCo = StartCoroutine(BuildWhenReady());
+
+
+        // 캐시 리셋 (패널 다시 켤 때도 무조건 텍스트 다시 세팅)
+        lastTotal = -1;
+        lastPercent = -1;
     }
 
     private void OnDisable()
@@ -129,11 +134,18 @@ public class SellStorageManager : MonoBehaviour
 
         var sm = SaveManager.Instance;
 
+        // Data 로드 완료 대기 (조건은 네 SaveManager 구조에 맞춰 조정)
+        while (sm.Data == null || sm.Data.resources == null || sm.Data.blackHole == null)
+            yield return null;
+
         // 중복 방지 위해 -= 후 +=
         sm.OnResourceChanged -= HandleResourceChanged;
         sm.OnResourceChanged += HandleResourceChanged;
 
-        RequestTopUiRefresh(); // 바로 갱신 대신 예약(디바운스 적용)
+        // 여기서는 예약 말고 강제 1회 갱신 추천
+        lastTotal = -1;
+        lastPercent = -1;
+        RefreshTopUI_Immediate();
 
         bindCo = null;
     }
@@ -156,7 +168,7 @@ public class SellStorageManager : MonoBehaviour
     private void HandleResourceChanged()
     {
         // 여기서 즉시 RefreshTopUI() 하지 말기
-        RequestTopUiRefresh();
+        RefreshTopUI_Immediate();
     }
 
     /*
