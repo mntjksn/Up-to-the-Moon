@@ -118,7 +118,7 @@
       "sub": "하늘에서 온 돌",
       "item_num": 14,
       "item_price": 3750,
-      "zoneMinKm": 980,
+      "zoneMinKm": 1023,
       "spritePath": "Supply/14"
     },
     {
@@ -126,7 +126,7 @@
       "sub": "무중력의 먼지",
       "item_num": 15,
       "item_price": 6750,
-      "zoneMinKm": 1200,
+      "zoneMinKm": 1455,
       "spritePath": "Supply/15"
     },
     {
@@ -134,7 +134,7 @@
       "sub": "텅 빈 결정",
       "item_num": 16,
       "item_price": 12150,
-      "zoneMinKm": 1450,
+      "zoneMinKm": 2068,
       "spritePath": "Supply/16"
     },
     {
@@ -142,7 +142,7 @@
       "sub": "회색의 흔적",
       "item_num": 17,
       "item_price": 21900,
-      "zoneMinKm": 1670,
+      "zoneMinKm": 2939,
       "spritePath": "Supply/17"
     },
     {
@@ -150,7 +150,7 @@
       "sub": "달의 파편",
       "item_num": 18,
       "item_price": 39400,
-      "zoneMinKm": 1900,
+      "zoneMinKm": 4178,
       "spritePath": "Supply/18"
     },
     {
@@ -158,7 +158,7 @@
       "sub": "별의 안개",
       "item_num": 19,
       "item_price": 71000,
-      "zoneMinKm": 2600,
+      "zoneMinKm": 5939,
       "spritePath": "Supply/19"
     },
     {
@@ -166,7 +166,7 @@
       "sub": "안개의 맥동",
       "item_num": 20,
       "item_price": 128000,
-      "zoneMinKm": 3600,
+      "zoneMinKm": 8442,
       "spritePath": "Supply/20"
     },
     {
@@ -174,7 +174,7 @@
       "sub": "차가운 별빛",
       "item_num": 21,
       "item_price": 230000,
-      "zoneMinKm": 5200,
+      "zoneMinKm": 12000,
       "spritePath": "Supply/21"
     },
     {
@@ -182,7 +182,7 @@
       "sub": "별의 핵",
       "item_num": 22,
       "item_price": 414000,
-      "zoneMinKm": 7600,
+      "zoneMinKm": 17057,
       "spritePath": "Supply/22"
     },
     {
@@ -190,7 +190,7 @@
       "sub": "눈부신 잔광",
       "item_num": 23,
       "item_price": 746000,
-      "zoneMinKm": 11000,
+      "zoneMinKm": 24246,
       "spritePath": "Supply/23"
     },
     {
@@ -198,7 +198,7 @@
       "sub": "빛을 쪼갠 결정",
       "item_num": 24,
       "item_price": 1149800,
-      "zoneMinKm": 16000,
+      "zoneMinKm": 34465,
       "spritePath": "Supply/24"
     },
     {
@@ -206,7 +206,7 @@
       "sub": "태양의 열",
       "item_num": 25,
       "item_price": 1772200,
-      "zoneMinKm": 24000,
+      "zoneMinKm": 48990,
       "spritePath": "Supply/25"
     },
     {
@@ -214,7 +214,7 @@
       "sub": "달의 맥박",
       "item_num": 26,
       "item_price": 2731300,
-      "zoneMinKm": 36000,
+      "zoneMinKm": 69636,
       "spritePath": "Supply/26"
     },
     {
@@ -222,7 +222,7 @@
       "sub": "별들의 호흡",
       "item_num": 27,
       "item_price": 4209600,
-      "zoneMinKm": 60000,
+      "zoneMinKm": 98985,
       "spritePath": "Supply/27"
     },
     {
@@ -230,7 +230,7 @@
       "sub": "성운의 중심",
       "item_num": 28,
       "item_price": 6488500,
-      "zoneMinKm": 110000,
+      "zoneMinKm": 140702,
       "spritePath": "Supply/28"
     },
     {
