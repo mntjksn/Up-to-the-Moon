@@ -337,7 +337,7 @@ public class MissionProgressManager : MonoBehaviour
         if (data != null && data.resources != null)
         {
             // Array/Convert 경로 제거: int[] 직접 검사
-            changedThisTick |= CheckEachResourceAtLeast_NoNotify(data.resources, 10000);
+            changedThisTick |= CheckEachResourceAtLeast_NoNotify(data.resources, 2000);
         }
 
         // tick에서 변경이 발생했으면 저장/notify 예약

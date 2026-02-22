@@ -315,7 +315,7 @@ public class SaveManager : MonoBehaviour
 
         // 부스트 값 보정(비정상/구버전 값 방어)
         if (Data.boost.boostCoolTime <= 0f)
-            Data.boost.boostCoolTime = 60f;
+            Data.boost.boostCoolTime = 30f;
 
         if (Data.boost.boostTime > 45f)
             Data.boost.boostTime = 45f;

@@ -360,9 +360,6 @@ public class UpgradeSlot : MonoBehaviour
         item.item_upgrade = true;
         item.item_unlock = true;
 
-        // 미션 진행도 반영
-        //MissionProgressManager.Instance?.Add("character_upgrade_count", 1);
-
         save.AddPlayerNum(1);
 
         // 저장
