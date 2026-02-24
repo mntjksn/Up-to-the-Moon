@@ -7515,7 +7515,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   saveDebounceSec: 0.5
-  prettyPrint: 0
+  prettyPrint: 1
   saveOnPauseQuit: 1
 --- !u!114 &212961373
 MonoBehaviour:
@@ -7547,7 +7547,7 @@ MonoBehaviour:
   CharacterItem: []
   spriteLoadsPerFrame: 4
   saveDebounceSec: 0.5
-  prettyPrint: 0
+  prettyPrint: 1
 --- !u!114 &212961375
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -7575,7 +7575,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   MissionItem: []
   saveDebounceSec: 0.5
-  prettyPrint: 0
+  prettyPrint: 1
 --- !u!114 &212961377
 MonoBehaviour:
   m_ObjectHideFlags: 0
