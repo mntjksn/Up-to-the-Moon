@@ -14575,7 +14575,7 @@ MonoBehaviour:
   spawnMinRadius: 0.5
   spawnMaxRadius: 3
   spawnZ: 0
-  weightPower: 1.5
+  weightPower: 1.25
   spawnVfx: 1
   maxVfxPerFrame: 8
   vfxEveryNDrops: 1
