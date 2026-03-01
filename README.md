@@ -44,7 +44,7 @@ Unity 기반으로 개발한 2D 방치형 모바일 게임입니다.
 - 안드로이드 기기에서 "알 수 없는 앱 설치" 허용 필요
 
 📥 **APK 다운로드**  
-https://github.com/mntjksn/Yi-Sun-sin_Idle_Game/releases
+https://github.com/mntjksn/Up-to-the-Moon/releases
 
 ---
 
