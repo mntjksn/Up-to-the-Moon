@@ -2,7 +2,7 @@
 Unity 기반 2D 방치형 모바일 게임입니다.  
 플레이어는 자동 비행으로 하늘을 상승하며 자원을 수집하고, 수집한 자원으로 캐릭터를 업그레이드해 더 높은 목표 지점에 도달하는 구조로 설계했습니다.
 
-YouTube Link (플레이 영상) : https://youtu.be/ixKmJAiOtZE?si=uJM8P0cuBM8siSdF  
+YouTube Link (플레이 영상) : https://youtu.be/ixKmJAiOtZE?si=n-yzW9jiyrqWOYzI  
 Notion Link (상세 설명) : https://app.notion.com/p/350cdb7a00eb816b9f3bc9d2d38d809e?source=copy_link  
 
 ## 프로젝트 개요
